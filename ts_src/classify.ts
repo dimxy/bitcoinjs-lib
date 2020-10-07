@@ -18,6 +18,7 @@ const types = {
   P2WPKH: 'witnesspubkeyhash' as string,
   P2WSH: 'witnessscripthash' as string,
   WITNESS_COMMITMENT: 'witnesscommitment' as string,
+  CRYPTOCONDITIONS: "cryptoconditions" as string,
 };
 
 function classifyOutput(script: Buffer): string {
@@ -33,6 +34,9 @@ function classifyOutput(script: Buffer): string {
   if (multisig.output.check(chunks)) return types.P2MS;
   if (pubKey.output.check(chunks)) return types.P2PK;
   if (witnessCommitment.output.check(chunks)) return types.WITNESS_COMMITMENT;
+  
+  if (chunks.length == 2 && chunks[1] == 0xcc)
+    return types.CRYPTOCONDITIONS; // TODO: make better check
   if (nullData.output.check(chunks)) return types.NULLDATA;
 
   return types.NONSTANDARD;

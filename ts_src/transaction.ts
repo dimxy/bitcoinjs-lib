@@ -1,5 +1,9 @@
 import { BufferReader, BufferWriter, reverseBuffer } from './bufferutils';
 import * as bcrypto from './crypto';
+//import * as blake2b from 'blake2b';
+
+const blake2b = require('blake2b');
+
 import * as bscript from './script';
 import { OPS as opcodes } from './script';
 import * as types from './types';
@@ -40,6 +44,16 @@ const BLANK_OUTPUT = {
   valueBuffer: VALUE_UINT64_MAX,
 };
 
+const ZCASH_PREVOUTS_HASH_PERSONALIZATION = Buffer.from('ZcashPrevoutHash');
+const ZCASH_SEQUENCE_HASH_PERSONALIZATION = Buffer.from('ZcashSequencHash');
+const ZCASH_OUTPUTS_HASH_PERSONALIZATION = Buffer.from('ZcashOutputsHash');
+//const ZCASH_JOINSPLITS_HASH_PERSONALIZATION = Buffer.from('ZcashJSplitsHash');
+//const ZCASH_SHIELDED_SPENDS_HASH_PERSONALIZATION = Buffer.from(('ZcashSSpendsHash');
+//const ZCASH_SHIELDED_OUTPUTS_HASH_PERSONALIZATION = Buffer.from('ZcashSOutputHash');
+const ZCASH_SIG_HASH_SAPLING_PERSONALIZATION = Buffer.concat([Buffer.from('ZcashSigHash'), Buffer.from([ 0xBB, 0x09, 0xB8, 0x76 ])]);
+//const ZCASH_SIG_HASH_OVERWINTER_PERSONALIZATION = Buffer.concat([Buffer.from('ZcashSigHash'), Buffer.from([ 0x19, 0x1B, 0xA8, 0x5B ])]);
+
+
 function isOutput(out: Output): boolean {
   return out.value !== undefined;
 }
@@ -70,20 +84,21 @@ export class Transaction {
     const bufferReader = new BufferReader(buffer);
 
     const tx = new Transaction();
-    tx.version = bufferReader.readInt32();
+    tx.version = bufferReader.readUInt32();
+    tx.versionGroupId = bufferReader.readUInt32(); // versionGroupId
 
-    const marker = bufferReader.readUInt8();
-    const flag = bufferReader.readUInt8();
+    //const marker = bufferReader.readUInt8();
+    //const flag = bufferReader.readUInt8();
 
-    let hasWitnesses = false;
-    if (
+    let hasWitnesses = false; // no witnesses in komodo
+    /*if (
       marker === Transaction.ADVANCED_TRANSACTION_MARKER &&
       flag === Transaction.ADVANCED_TRANSACTION_FLAG
     ) {
       hasWitnesses = true;
     } else {
       bufferReader.offset -= 2;
-    }
+    }*/
 
     const vinLen = bufferReader.readVarInt();
     for (let i = 0; i < vinLen; ++i) {
@@ -116,6 +131,12 @@ export class Transaction {
 
     tx.locktime = bufferReader.readUInt32();
 
+    tx.nExpiryHeight = bufferReader.readUInt32(); // expiry height
+    bufferReader.readUInt64(); // value balance
+    bufferReader.readVarInt(); // empty vShieldedSpend
+    bufferReader.readVarInt(); // empty vShieldedOutput
+    bufferReader.readVarInt(); // empty vjoinsplit
+
     if (_NO_STRICT) return tx;
     if (bufferReader.offset !== buffer.length)
       throw new Error('Transaction has unexpected data');
@@ -136,7 +157,9 @@ export class Transaction {
   }
 
   version: number = 1;
+  versionGroupId: number = 0;
   locktime: number = 0;
+  nExpiryHeight: number = 0;
   ins: Input[] = [];
   outs: Output[] = [];
 
@@ -224,13 +247,16 @@ export class Transaction {
             return sum + vectorSize(input.witness);
           }, 0)
         : 0)
-    );
+        + 4 + 15);
   }
 
   clone(): Transaction {
     const newTx = new Transaction();
     newTx.version = this.version;
+    newTx.versionGroupId = this.versionGroupId;
+
     newTx.locktime = this.locktime;
+    newTx.nExpiryHeight = this.nExpiryHeight;
 
     newTx.ins = this.ins.map(txIn => {
       return {
@@ -430,6 +456,114 @@ export class Transaction {
     return bcrypto.hash256(tbuffer);
   }
 
+  hashForKomodo(
+    inIndex: number,
+    prevOutScript: Buffer,
+    value: number,
+    hashType: number,
+  ): Buffer {
+    typeforce(
+      types.tuple(types.UInt32, types.Buffer, types.Satoshi, types.UInt32),
+      arguments,
+    );
+
+    let tbuffer: Buffer = Buffer.from([]);
+    let bufferWriter: BufferWriter;
+
+    let hashOutputs = Buffer.allocUnsafe(32);
+    let hashPrevouts = Buffer.allocUnsafe(32);
+    let hashSequence = Buffer.allocUnsafe(32);
+    let sigHash = Buffer.allocUnsafe(32);
+
+    let emptyHash = Buffer.alloc(32); // init with 0
+
+
+    tbuffer = Buffer.alloc/*Unsafe*/(36 * this.ins.length);
+    bufferWriter = new BufferWriter(tbuffer, 0);
+
+    this.ins.forEach(txIn => {
+      bufferWriter.writeSlice(txIn.hash);
+      bufferWriter.writeUInt32(txIn.index);
+    });
+
+    console.log('prevouts tbuffer', tbuffer.toString('hex'));
+    let b = new blake2b(32, null, null, ZCASH_PREVOUTS_HASH_PERSONALIZATION);
+    b.update(tbuffer);
+    b.digest(hashPrevouts);
+    console.log('hashPrevouts=', hashPrevouts.toString('hex'));
+    
+    tbuffer = Buffer.allocUnsafe(4 * this.ins.length);
+    bufferWriter = new BufferWriter(tbuffer, 0);
+
+    this.ins.forEach(txIn => {
+      bufferWriter.writeUInt32(txIn.sequence);
+    });
+
+    b = new blake2b(32, null, null, ZCASH_SEQUENCE_HASH_PERSONALIZATION);
+    b.update(tbuffer);
+    b.digest(hashSequence);
+    
+    const txOutsSize = this.outs.reduce((sum, output) => {
+      return sum + 8 + varSliceSize(output.script);
+    }, 0);
+    tbuffer = Buffer.allocUnsafe(txOutsSize);
+    bufferWriter = new BufferWriter(tbuffer, 0);
+
+    this.outs.forEach(out => {
+      bufferWriter.writeUInt64(out.value);
+      bufferWriter.writeVarSlice(out.script);
+    });
+
+    b = new blake2b(32, null, null, ZCASH_OUTPUTS_HASH_PERSONALIZATION);
+    b.update(tbuffer);
+    b.digest(hashOutputs);
+
+    tbuffer = Buffer.alloc /*allocUnsafe*/(156 + 8 + 4 + 4 + 3 * 32 + varSliceSize(prevOutScript));  // + VersionGroupId (4) + ExpiryHeight (4) + 3 empty hashes + ValueBalance64
+    bufferWriter = new BufferWriter(tbuffer, 0);
+
+    const input = this.ins[inIndex];
+    bufferWriter.writeUInt32(this.version);
+    bufferWriter.writeUInt32(this.versionGroupId);
+    bufferWriter.writeSlice(hashPrevouts);
+    bufferWriter.writeSlice(hashSequence);
+    //bufferWriter.writeSlice(input.hash);
+    //bufferWriter.writeUInt32(input.index);
+    //bufferWriter.writeVarSlice(prevOutScript);
+    //bufferWriter.writeUInt64(value);
+    //bufferWriter.writeUInt32(input.sequence);
+    bufferWriter.writeSlice(hashOutputs);
+    console.log('hashOutputs', tbuffer.toString('hex'))
+
+
+    bufferWriter.writeSlice(emptyHash);   // JoinSplits
+    bufferWriter.writeSlice(emptyHash);   // Spend descriptions
+    bufferWriter.writeSlice(emptyHash);   // Output descriptions
+    console.log('3 empty hash', tbuffer.toString('hex'))
+    bufferWriter.writeUInt32(this.locktime);
+    bufferWriter.writeUInt32(this.nExpiryHeight);  // ExpiryHeight
+    bufferWriter.writeUInt64(0); // value balance
+    bufferWriter.writeUInt32(hashType);
+    console.log('locktime', tbuffer.toString('hex'))
+
+    if (inIndex >= 0) { // TODO: check if 'not and input'
+    console.log('input.hash')
+
+      bufferWriter.writeSlice(input.hash);
+      bufferWriter.writeUInt32(input.index);
+      bufferWriter.writeVarSlice(prevOutScript);
+      bufferWriter.writeUInt64(value);
+      bufferWriter.writeUInt32(input.sequence);
+      console.log('input.hash', tbuffer.toString('hex'))
+
+    }
+
+    console.log('tbuffer=', tbuffer.toString('hex'));
+    b = new blake2b(32, null, null, ZCASH_SIG_HASH_SAPLING_PERSONALIZATION);
+    b.update(tbuffer);
+    b.digest(sigHash);
+    return sigHash;
+  }
+
   getHash(forWitness?: boolean): Buffer {
     // wtxid for coinbase is always 32 bytes of 0x00
     if (forWitness && this.isCoinbase()) return Buffer.alloc(32, 0);
@@ -471,7 +605,8 @@ export class Transaction {
 
     const bufferWriter = new BufferWriter(buffer, initialOffset || 0);
 
-    bufferWriter.writeInt32(this.version);
+    bufferWriter.writeUInt32(this.version);  // komodo header incl overwinter flag
+    bufferWriter.writeUInt32(this.versionGroupId);  // komodo version group id
 
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
 
@@ -507,6 +642,13 @@ export class Transaction {
     }
 
     bufferWriter.writeUInt32(this.locktime);
+
+    bufferWriter.writeUInt32(this.nExpiryHeight);   // expiry height
+    bufferWriter.writeUInt64(0);   // value balance
+
+    bufferWriter.writeVarInt(0);   // empty vShieldedSpend
+    bufferWriter.writeVarInt(0);   // empty vShieldedOutput
+    bufferWriter.writeVarInt(0);   // empty vjoinsplit
 
     // avoid slicing unless necessary
     if (initialOffset !== undefined)

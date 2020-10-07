@@ -62,6 +62,7 @@ interface TxbInput {
   sequence?: number;
   scriptSig?: TxbScript;
   maxSignatures?: number;
+  ccScriptSig?: TxbScript;
 }
 
 interface TxbOutput {
@@ -144,7 +145,10 @@ export class TransactionBuilder {
     this.__PREV_TX_SET = {};
     this.__INPUTS = [];
     this.__TX = new Transaction();
-    this.__TX.version = 2;
+    // Komodo:
+    this.__TX.version = ((1 << 31) | 4) >>> 0;  // overwinter_flag + ver=4, set unsigned with 'N >>> 0'
+    this.__TX.versionGroupId = 2301567109;  // after sapling
+
     this.__USE_LOW_R = false;
     console.warn(
       'Deprecation Warning: TransactionBuilder will be removed in the future. ' +
@@ -186,6 +190,11 @@ export class TransactionBuilder {
 
     // XXX: this might eventually become more complex depending on what the versions represent
     this.__TX.version = version;
+  }
+  setExpiryHeight(nExpiryHeight: number): void {
+    typeforce(types.UInt32, nExpiryHeight);
+
+    this.__TX.nExpiryHeight = nExpiryHeight;
   }
 
   addInput(
@@ -940,6 +949,12 @@ function build(
         },
       });
     }
+    case SCRIPT_TYPES.CRYPTOCONDITIONS: {
+      return {
+        input: input.ccScriptSig || Buffer.from([]),
+        witness: [],
+      }
+    }
   }
 }
 
@@ -1300,11 +1315,18 @@ function getSigningData(
       hashType,
     );
   } else {
-    signatureHash = tx.hashForSignature(
+    /*signatureHash = tx.hashForSignature(
       vin,
       input.signScript as Buffer,
       hashType,
+    );*/
+    signatureHash = tx.hashForKomodo(
+      vin,
+      input.signScript as Buffer,
+      input.value as number,
+      hashType,
     );
+    console.log('hashForKomodo', signatureHash.toString('hex'));
   }
 
   return {
