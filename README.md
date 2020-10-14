@@ -27,7 +27,7 @@ To test this you need a komodod chain with cc enabled (Note about the correct ko
 
 Clone this git repository go to the new dir and checkout dev-kmd branch.
 
-Install the node js dependency packages:
+Install the bitcoinjs-lib-kmd dependency packages, inside the repo dir run:
 
 ```
 npm install
@@ -51,20 +51,20 @@ export const yourchainname: Network = {
 };
 ```
 
-Rebuild nodejs packages
-
+Rebuild nodejs packages:
 ```
 npm run build
 ```
 
-In mynodetest.js change mynetwork var to yourchainname
+In mynodetest.js change mynetwork var to yourchainname:<br>
 ```
 var mynetwork=networks.yourchainname
 ```
 
-Build cryptoconditions wasm module:
+Set your funding faucet wif and address and a wif and address getting funds in mynodetest.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
 
-Setup the rust nightly build to build cryptoconditions. It looks like the latest nightly build is btoken and cannot use some runtime lib.
+Build cryptoconditions wasm module:<br>
+Setup the rust nightly build to build cryptoconditions. It looks like the latest nightly build is broken and omitted some runtime lib.
 I use this nightly-2020-09-11 build that works well for me:
 
 ```
