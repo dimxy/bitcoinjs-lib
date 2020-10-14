@@ -19,7 +19,8 @@ If you are going to use this lib in browser you also need:
 
 ## What test code does
 
-Include a mytestnode.js file that allows to create cc faucet create and get transactions
+Include a mytestnode.js file that allows to create cc faucet create and get transactions.
+To test this you need a komodod chain with cc enabled (Note about the correct komodod repo with an nspv patch, see below)
 
 ## Installation
 
@@ -161,7 +162,56 @@ The web server should be available at http://localhost:8080 url (if you installe
 
 ## Setting up a websocket proxy
 
+Clone https://github.com/mappum/webcoin-bridge.git repo.
+Change to webcoin-bridge dir.
+run packages install:
+```
+npm install
+```
+Copy ./node_modules/webcoin-bitcoin dir into ./src as webcoin-yourchainname
+Change to ./src/webcoin-yourchainname dir.
+Edit ./lib/net.js file.
+Add or change lines:
+```
+var magic = your-chain-magic;
+var protocolVersion = 170009;
+var defaultPort = your-chain-p2p-port;
 
+var dnsSeeds = [
+//  'seed.bitcoin.sipa.be', 'dnsseed.bluematt.me', 'dnsseed.bitcoin.dashjr.org', 'seed.bitcoinstats.com', 'seed.bitnodes.io', 'bitseed.xf2.org', 'seed.bitcoin.jonasschnelli.ch'
+  'localhost'
+];
+
+var staticPeers = [ 'localhost:<your-chain-p2p-port>' ];
+
+var webSeeds = [
+// TODO: add more
+];
+
+var staticPeers = [ 'localhost:14222' ];
+
+module.exports = {
+  magic: magic,
+  defaultPort: defaultPort,
+  dnsSeeds: dnsSeeds,
+  webSeeds: webSeeds,
+  staticPeers: staticPeers,
+  protocolVersion: protocolVersion
+};
+```
+
+Now run the ws bridge from webcoin-bridge dir:
+```
+node ./bin/bridge.js --network ../src/webcoin-yourchainname
+```
+
+## Use the correct komodod version
+
+The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo) 
+Use this komodod branch for this:
+https://github.com/dimxy/komodo/tree/nspv-utxo-ext
+
+Create a chain and fix
 
 ## Info about new and updated packages
 
