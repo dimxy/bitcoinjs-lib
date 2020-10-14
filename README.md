@@ -182,7 +182,7 @@ npm run serve
 ```
 The web server should be available at http://localhost:8080 url (if you installed the webpack on the same PC).
 
-## Setting up a websocket proxy
+### Setting up a websocket proxy
 
 Clone https://github.com/mappum/webcoin-bridge.git repo.
 Change to webcoin-bridge dir.
@@ -228,7 +228,7 @@ WS Proxy should be available on the default port 8192.<br>
 The mynodetest.js test app also has this port configured by default.
 
 
-## Use the correct komodod version
+### Use the correct komodod version
 
 The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo).<br>
 Use this komodod branch for this:
