@@ -48,7 +48,7 @@ export const yourchainname: Network = {
 };
 ```
 
-Build nodejs packages
+Rebuild nodejs packages
 
 ```
 npm run build
@@ -73,13 +73,12 @@ Change to cryptoconditions-js directory and build the cryptoconditions wasm modu
 cd ./node_modules/cryptoconditions-js
 ```
 
-### Build cryptoconditions for nodejs
+### Build test code to run in nodejs
 
 Use this command to build for nodejs:
 ```
 wasm-pack build -t nodejs
 ```
-
 
 In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions:
 ```
@@ -92,28 +91,73 @@ nodejs ./mynodetest.js
 ```
 
 
-### Build cryptoconditions for use in the browser
+### Build test code for use in the browser
 
-Alternatively, to build for browseify use this command:
+To run the test code in the browser you will need a webserver to host an html page and the test code index.js.
+Also you will need a websocket proxy.
+
+### Setting up a web server
+
+I use webpack dev server, running in nodejs.
+To set it up make a dir like webpack and create in it two files with the following content:
+
+package.json:
+```
+{
+  "scripts": {
+    "serve": "webpack-dev-server"
+  },
+  "dependencies": {
+    "cryptoconditions-js": "git+https://github.com/dimxy/cryptoconditions-js.git#master"
+  },
+  "devDependencies": {
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
+  }
+}
+```
+
+webpack.config.js:
+```
+const path = require('path');
+module.exports = {
+  entry: "./index.js",
+  output: {
+    path: path.resolve(__dirname, "dist"),
+    filename: "index.js",
+  },
+  mode: "development"
+};
+```
+
+Inside webpack dir run 
+```
+npm install
+``` 
+(ignore printed errors)
+
+Change to ./node_modules/cryptoconditions-js dir and run
 ```
 wasm-pack build
 ```
 
+Now goto to bitcoinjs-lib-kmd dir.
 In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions:
 ```
 const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
 ```
 
-build the test code for browser:
+Build the test code for browser:
 ```
 browserify mynodetest.js -o index.js
 ```
-
-To run the test code in the browser you will need a webserver to host an html page and index.js test code.
-Also you will need a websocket proxy.
-
-## Setting up a webserver
-
+Copy index.js into webpack dir.
+Run the web server with a command:
+```
+npm run serve
+```
+The web server should be available at http://localhost:8080 url (if you installed the webpack on the same PC)
 
 ## Setting up a websocket proxy
 
