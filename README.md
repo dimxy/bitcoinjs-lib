@@ -211,8 +211,6 @@ The last thing is to make sure you run a komodod version with an extension to nS
 Use this komodod branch for this:
 https://github.com/dimxy/komodo/tree/nspv-utxo-ext
 
-Create a chain and fix
-
 ## Info about new and updated packages
 
 Some dependent packages were modified to add support for komodo:
