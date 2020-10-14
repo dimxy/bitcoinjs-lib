@@ -18,7 +18,7 @@ If you are going to use this lib in browser you also need:
   a webserver app (for example, webpack dev server)
   a wsproxy app (for example, webcoin-bridge)
 
-## What test code does
+## What test app does
 
 Include a mytestnode.js file that allows to create cc faucet create and get transactions.
 To test this you need a komodod chain with cc enabled (Note about the correct komodod repo with an nspv patch, see below)
@@ -77,7 +77,7 @@ Change to cryptoconditions-js directory and build the cryptoconditions wasm modu
 cd ./node_modules/cryptoconditions-js
 ```
 
-### Build test code to run in nodejs
+### Build test app to run in nodejs
 
 Use this command to build for nodejs:
 ```
@@ -95,9 +95,9 @@ node ./mynodetest.js
 ```
 
 
-### How to use the test code in the browser:
+### How to use the test app in the browser:
 
-To run the test code in the browser you will need a webserver to host an html page and the test code index.js.
+To run the test app in the browser you will need a webserver to host an html page and the test app index.js.
 Also you will need a websocket proxy.
 
 ### Setting up a web server
@@ -152,7 +152,7 @@ In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions
 const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
 ```
 
-Build the test code for browser:
+Build the test app for browser:
 ```
 browserify mynodetest.js -o index.js
 ```
@@ -221,6 +221,9 @@ Now run the ws bridge from webcoin-bridge dir:
 ```
 node ./bin/bridge.js --network ../src/webcoin-yourchainname
 ```
+WS Proxy should be available on the default port 8192.
+The mynodetest.js test app also has this port configured by default.
+
 
 ## Use the correct komodod version
 
