@@ -210,8 +210,6 @@ var webSeeds = [
 // TODO: add more
 ];
 
-var staticPeers = [ 'localhost:14222' ];
-
 module.exports = {
   magic: magic,
   defaultPort: defaultPort,
