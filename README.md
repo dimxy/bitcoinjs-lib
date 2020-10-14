@@ -63,10 +63,11 @@ var mynetwork=networks.yourchainname
 
 Set your funding faucet wif and address and a wif and address getting funds in mynodetest.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
 
+## Build test app to run in nodejs
+
 Build cryptoconditions wasm module:<br>
 Setup the rust nightly build to build cryptoconditions. It looks like the latest nightly build is broken and omitted some runtime lib.
 I use this nightly-2020-09-11 build that works well for me:
-
 ```
 rustup toolchain install nightly-2020-09-11
 rustup default nightly-2020-09-11
@@ -75,16 +76,10 @@ rustup default nightly-2020-09-11
 Change to cryptoconditions-js directory and build the cryptoconditions wasm module:
 ```
 cd ./node_modules/cryptoconditions-js
-```
-
-### Build test app to run in nodejs
-
-Use this command to build for nodejs:
-```
 wasm-pack build -t nodejs
 ```
 
-In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions:
+In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions in nodejs:
 ```
 const ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');
 ```
@@ -95,7 +90,7 @@ node ./mynodetest.js
 ```
 
 
-### How to use the test app in the browser:
+## How to use the test app in the browser:
 
 To run the test app in the browser you will need a webserver to host an html page and the test app index.js.
 Also you will need a websocket proxy.
@@ -151,7 +146,7 @@ Change to ./node_modules/cryptoconditions-js subdir and run the following comman
 wasm-pack build
 ```
 
-Now go to to bitcoinjs-lib-kmd repo dir.<br>
+Now go to bitcoinjs-lib-kmd repo dir.<br>
 In the test app mynodetest.js use (uncomment) this statement to load cryptoconditions for browser:
 ```
 const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
