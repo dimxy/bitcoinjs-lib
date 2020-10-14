@@ -13,6 +13,7 @@ const kmdmessages = require('bitcoin-protocol').kmdmessages;
 const ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 const networks = require('./src/networks');
+const mynetwork = networks.dimxy15;
 const bufferutils = require("./src/bufferutils");
 const script = require("./src/script");
 const FAUCETSIZE = 10000000;
@@ -36,8 +37,8 @@ var cryptoconditions; // init in top async func
 // for dimxy14
 //var magic = 0x4ea629ab
 //var magic = 0xab29a64e
+//var magic = 0xDC2E96D8 //0xD8962EDC  // DIMXY15 0xDC2E96D8
 
-var magic = 0xDC2E96D8 //0xD8962EDC  // DIMXY15 0xDC2E96D8
 var defaultPort = 14722
 
 var dnsSeeds = [
@@ -53,7 +54,7 @@ var staticPeers = [
 ]
 
 var params = {
-  magic: magic,
+  magic: mynetwork.bip32.public,
   defaultPort: defaultPort,
   dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,
@@ -235,7 +236,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   // init lib cryptoconditions
   cryptoconditions = await ccimp;  // always ensure cc is loaded
 
-  const txbuilder = new TxBuilder.TransactionBuilder(networks.dimxy14);
+  const txbuilder = new TxBuilder.TransactionBuilder(mynetwork);
   let addedUnspents = [];
   const txfee = 10000;
   
@@ -280,7 +281,7 @@ async function makeFaucetGetTx(wif, myaddress)
   // init lib cryptoconditions
   cryptoconditions = await ccimp;  // always ensure cc is loaded
 
-  const txbuilder = new TxBuilder.TransactionBuilder(networks.dimxy14);
+  const txbuilder = new TxBuilder.TransactionBuilder(mynetwork);
   let addedUnspents = [];
   const txfee = 10000;
   const amount = FAUCETSIZE;
@@ -316,7 +317,7 @@ async function makeFaucetGetTx(wif, myaddress)
     throw new Error('could not create cc spk');
   }
 
-  let keyPairIn = ecpair.fromWIF(wif, networks.dimxy14);
+  let keyPairIn = ecpair.fromWIF(wif, mynetwork);
   /*let mycond = {
     type:	"threshold-sha-256",
     threshold:	2,
@@ -539,7 +540,7 @@ function finalizeCCtx(wif, txb, addedUnspents, cccond)
       throw new Error('internal err: could not find tx unspent in addedUnspents');
     
     console.log('unspent.script=', Buffer.from(unspent.script).toString('hex'));
-    let keyPairIn = ecpair.fromWIF(wif, networks.dimxy14);
+    let keyPairIn = ecpair.fromWIF(wif, mynetwork);
 
     if (!isPayToCryptocondition(txb.__INPUTS[index].prevOutScript))  {
       txb.sign({

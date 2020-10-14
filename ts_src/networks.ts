@@ -58,3 +58,16 @@ export const dimxy14: Network = {
   scriptHash: 0x55,
   wif: 0xbc,
 };
+export const dimxy15: Network = {
+  messagePrefix: '\x18DIMXY15 asset chain:\n',
+  bech32: 'R',
+  bip32: {
+    public: 0xDC2E96D8,
+    private: 0x00000000,
+  },
+  pubKeyHash: 0x3c,
+  scriptHash: 0x55,
+  wif: 0xbc,
+};
+
+// add your chain here:
