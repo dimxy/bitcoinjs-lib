@@ -253,6 +253,6 @@ Added a new package cryptoconditions-js that currently is loaded also from a git
 
 
 ## Original readme
-Read original readme [here](https://github.com/bitcoinjs/bitcoinjs-lib).
+Read the original readme [here](https://github.com/bitcoinjs/bitcoinjs-lib).
 
 ## LICENSE [MIT](LICENSE)
