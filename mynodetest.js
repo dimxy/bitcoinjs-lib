@@ -28,6 +28,10 @@ const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 const faucetGlobalPk = "03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12";
 const faucetGlobalPrivkey = Buffer.from([ 0xd4, 0x4f, 0xf2, 0x31, 0x71, 0x7d, 0x28, 0x02, 0x4b, 0xc7, 0xdd, 0x71, 0xa0, 0x39, 0xc4, 0xbe, 0x1a, 0xfe, 0xeb, 0xc2, 0x46, 0xda, 0x76, 0xf8, 0x07, 0x53, 0x3d, 0x96, 0xb4, 0xca, 0xa0, 0xe9 ]);
 const faucetGlobalAddress = "R9zHrofhRbub7ER77B7NrVch3A63R39GuC";
+const faucetcreatewif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
+const faucetcreateaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
+const faucetgetwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
+const faucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
 
 var cryptoconditions; // init in top async func
 //const APIURL = "http://localhost:8080/1";
@@ -130,25 +134,27 @@ function getTransactions(txids)
 
 // create connections to peers
 peers.connect(async () => {
-  /*var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
+  /* test get blocks:
+  var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
   peers.getBlocks(hashes, {}, (err, res, peer) => {
     console.log('err=', err, 'res=', res);
   });*/
+
   try {
-    //console.log('calling getUtxosAsync');
-    //let p = await getUtxosAsync("RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu");
+    
+    // this line makes cc faucet create tx
+    let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
+    
+    // this line is to make cc faucet get tx
+    // let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
 
-    let txhex = await ccfaucet_create('UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed', 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu', FAUCETSIZE*20);
-    //let txhex = await ccfaucet_get('UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq', 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP');
-
+    // uncomment this line to print txhex in browser:
+    // document.write('cc faucet txhex='+txhex);
     console.log('txhex=', txhex);
   }
   catch(err) {
     console.log('caught err=', err);
   }
-  /*peers.getUtxos("RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", {}, (err, res, peer) => {
-    console.log('err=', err, 'res=', res);
-  });*/
 });
 
 
@@ -160,6 +166,7 @@ peers.connect(async () => {
 //getHt();
 
 
+// --------------- test calls, not used
 /*regtestUtils.mine(1)
   .then(json => console.log('tx='+json))
   .catch(err => console.log('err='+err)); */
@@ -187,7 +194,7 @@ regtestUtils.ccunspents('R9zHrofhRbub7ER77B7NrVch3A63R39GuC')
   );*/
 
 /*
-ccfaucet_create('UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed', 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu', FAUCETSIZE*20)
+ccfaucet_create(faucetcreatewif, 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu', FAUCETSIZE*20)
   .then(
     txhex => { 
       console.log('txhex=', txhex);
@@ -199,7 +206,7 @@ ccfaucet_create('UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed', 'RJXkCF7
   );*/
 
 /* 
-ccfaucet_get('UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq', 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP')
+ccfaucet_get(faucetgetwif, 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP')
   .then(
     txhex => {
       console.log('txhex=', txhex);
@@ -209,6 +216,7 @@ ccfaucet_get('UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq', 'RCrTxfdaGL
   .catch(
     err => console.log('ccfaucet_get err=', err, 'stack=', err.stack)
   );*/
+// -----------------------
 
 async function ccfaucet_create(wif, myaddress, amount) {
   let tx = await makeFaucetCreateTx(wif, myaddress, amount);
@@ -221,14 +229,6 @@ async function ccfaucet_get(wif, myaddress) {
   //return this.broadcast(tx.toHex());
   return tx.toHex();
 };
-
-/*
-async function ccfaucet_get(amount) {
-  return this.dhttp({
-    method: 'GET',
-    url: `${this._APIURL}/cc/faucet/get/${amount}`,
-  });
-};*/
 
 
 async function makeFaucetCreateTx(wif, myaddress, amount) 
@@ -316,28 +316,7 @@ async function makeFaucetGetTx(wif, myaddress)
   if (ccSpk == null)  {
     throw new Error('could not create cc spk');
   }
-
-  let keyPairIn = ecpair.fromWIF(wif, mynetwork);
-  /*let mycond = {
-    type:	"threshold-sha-256",
-    threshold:	2,
-    subfulfillments:	[{
-        type:	"eval-sha-256",   
-        code:	 hex2Base64('e4')     
-    }, {            
-        type:	"threshold-sha-256",
-        threshold:	1,
-        subfulfillments:	[{  
-                type:	"secp256k1-sha-256",
-                publicKey:	keyPairIn.publicKey.toString('hex')
-        }]  
-    }]   
-  };
-  let myCCSpk = makeCCSpk(mycond);
-  if (myCCSpk == null)  {
-    throw new Error('could not create my cc spk');
-  }*/
-
+  
   /*
   let cctxid = '85224abc96abcb3772bf2883fca9d393348166bbcd816654f8726376c06b7f20';
   let txraw = await regtestUtils.fetch(cctxid);
@@ -467,10 +446,6 @@ async function addCCInputs(txbuilder, address, amount, addedUnspents)
   return added;
 }
 
-/*class CCTransactionBuilder extends TransactionBuilder {
-}*/
-
-
 function makeCCSpk(cond)
 {
   //let ccimp = await cryptoconditions;
@@ -596,9 +571,4 @@ function isPayToCryptocondition(spk)
       return true;
   }
   return false;
-}
-
-function nspvRequest()
-{
-  
 }
