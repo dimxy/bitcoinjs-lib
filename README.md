@@ -141,12 +141,12 @@ npm install
 ``` 
 (ignore printed errors)
 
-Change to ./node_modules/cryptoconditions-js dir and run
+Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
 ```
 wasm-pack build
 ```
 
-Now goto to bitcoinjs-lib-kmd dir.
+Now go to to bitcoinjs-lib-kmd repo dir.
 In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions:
 ```
 const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
@@ -156,7 +156,7 @@ Build the test code for browser:
 ```
 browserify mynodetest.js -o index.js
 ```
-Copy index.js into webpack dir.
+Copy index.js into the webpack dir.
 Make a simple html page in the webpack dir to run index.js:
 ```
 <!DOCTYPE html>
@@ -227,6 +227,13 @@ node ./bin/bridge.js --network ../src/webcoin-yourchainname
 The last thing is to make sure you run a komodod version with an extension to nSPV getutxos call (it should additionally return script for each utxo) 
 Use this komodod branch for this:
 https://github.com/dimxy/komodo/tree/nspv-utxo-ext
+
+
+## What should happen in the test
+
+When you run the chain, webpack and webcoin-bridge, you might go to the test page url in browser (http://localhost:8080) 
+When you load it in a browser it should print the created cc faucet txhex content in the browser window. 
+
 
 ## Info about new and updated packages
 
