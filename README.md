@@ -15,8 +15,15 @@ You need installed:
   nodejs
   rust
   wasm-pack to build wasm cryptoconditions module 
-  browserify package if you are going to use this lib in browser
-  wsproxy app, if you are going to use this lib in browser, for example, webcoin-bridge
+  
+If you are going to use this lib in browser you also need:
+  browserify package 
+  a webserver app (for example, webpack dev server)
+  a wsproxy app (for example, webcoin-bridge)
+
+## What test code does
+
+Include a mytestnode.js file that allows to create cc faucet create and get transactions
 
 ## Installation
 
@@ -101,20 +108,30 @@ In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions
 const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
 ```
 
-build the code for browser:
+build the test code for browser:
 ```
-browserify mynodetest.js -o your-name.js
+browserify mynodetest.js -o index.js
 ```
 
-## Updated packages
+To run the test code in the browser you will need a webserver to host an html page and index.js test code.
+Also you will need a websocket proxy.
+
+## Setting up a webserver
+
+
+## Setting up a websocket proxy
+
+
+
+## Info about new and updated packages
 
 Some dependent packages were modified to add support for komodo:
   * bitcoin-protocol
   * bitcoin-net
 
-Links to these packages are updated to load them from forked github repositories (see package.json)  
+Links to these packages in package.json are updated to load them from forked github repositories (see package.json)  
   
-Added a new package cryptoconditions-js that currently is loaded also from a github repo
+Added a new package cryptoconditions-js that currently is loaded also from a github repo.
 
 
 ## Original readme
