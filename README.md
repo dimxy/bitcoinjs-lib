@@ -234,6 +234,8 @@ The last thing is to make sure you run a komodod version with an extension to nS
 Use this komodod branch for this:
 https://github.com/dimxy/komodo/tree/nspv-utxo-ext
 
+I recommed to run komodod with -debug=net to easily discover wrong magic errors and observe communication dynamic. Basically komodod should print ver/verack and ping/pong exchanges in the debug.log, if connection is okay
+
 
 ## What should happen in the test
 
