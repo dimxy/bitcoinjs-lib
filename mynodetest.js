@@ -9,8 +9,8 @@ const Transaction=require('./src/transaction');
 const kmdmessages = require('./kmdmessages');
 
 //import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
-//const ccimp = import('cryptoconditions/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
-const ccimp = require('cryptoconditions/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
+//const ccimp = import('pycc/cryptoconditions/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
+const ccimp = require('pycc/cryptoconditions/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 const networks = require('./src/networks');
 const bufferutils = require("./src/bufferutils");

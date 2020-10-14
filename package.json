@@ -67,7 +67,8 @@
     "typeforce": "^1.11.3",
     "varuint-bitcoin": "^1.1.2",
     "wasi": "0.0.6",
-    "wif": "^2.0.1"
+    "wif": "^2.0.1",
+    "pycc": "git+https://github.com/dimxy/pycc#ccjs"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
