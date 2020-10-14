@@ -1,24 +1,27 @@
 
 'use strict';
 
-const { getHashes } = require('crypto');
-var netutils = require('regtest-client');
+//const { getHashes } = require('crypto');
+//var netutils = require('regtest-client');
 const TxBuilder=require('./src/transaction_builder');
 const Transaction=require('./src/transaction');
 
-//const ccimp = import('cryptoconditions/cryptoconditions.js');
-const ccimp = require('cryptoconditions/cryptoconditions.js');
+const kmdmessages = require('./kmdmessages');
+
+//import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
+//const ccimp = import('cryptoconditions/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
+const ccimp = require('cryptoconditions/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 const networks = require('./src/networks');
-const bufferutils_1 = require("./src/bufferutils");
+const bufferutils = require("./src/bufferutils");
 const script = require("./src/script");
 const FAUCETSIZE = 10000000;
 
-//import * as cryptoconditions from "cryptoconditions/cryptoconditions.js";
 
-const fs = require('fs');
+//const fs = require('fs');
 const classify = require('./src/classify');
 const ecpair = require('./src/ecpair');
+const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 //const { dimxy14 } = require('./src/networks');
 
 const faucetGlobalPk = "03682b255c40d0cde8faee381a1a50bbb89980ff24539cb8518e294d3a63cefe12";
@@ -31,12 +34,130 @@ const APIPASS = "satoshi";
 
 const regtestUtils = new netutils.RegtestUtils({ APIPASS, APIURL });
 
-var getHt = async function () {
+// for dimxy14
+//var magic = 0x4ea629ab
+//var magic = 0xab29a64e
+
+var magic = 0xDC2E96D8 //0xD8962EDC  // DIMXY15 0xDC2E96D8
+var defaultPort = 14722
+
+var dnsSeeds = [
+  "localhost"
+]
+var webSeeds = [
+  'ws://localhost:8192'
+  // TODO: add more
+]
+
+var staticPeers = [
+  'localhost:14722'
+]
+
+var params = {
+  magic: magic,
+  defaultPort: defaultPort,
+  dnsSeeds: dnsSeeds,
+  webSeeds: webSeeds,
+  staticPeers: staticPeers,
+  connectWeb: true,
+  protocolVersion: 170009,
+  messages: kmdmessages.kmdMessages
+}
+
+var opts = {
+  numPeers: 1,
+  hardLimit: 1
+}
+
+// create peer group
+var PeerGroup = require('bitcoin-net').PeerGroup
+var peers = new PeerGroup(params, opts)
+
+peers.on('peer', (peer) => {
+  console.log('connected to peer', peer.socket.remoteAddress)
+ 
+  // send/receive messages
+  /*peer.once('pong', () => console.log('received ping response'))
+  peer.send('ping', {
+    nonce: require('crypto').pseudoRandomBytes(8)
+  })
+  console.log('sent ping')*/
+})
+ 
+/*
+peers.on('getBlocks', (peer) => {
+  console.log('got blocks', peer.socket.remoteAddress)
+})*/
+
+/*peers.on('nSPV', (peer) => {
+  console.log('got nspv result', peer.socket.remoteAddress)
+})*/
+
+function getUtxos(address, isCC)
+{
+  return new Promise((resolve, reject) => {
+    peers.getUtxos(address, isCC, {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err)
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+function getNormalUtxos(address)
+{
+  return getUtxos(address, false);
+}
+function getCCUtxos(address)
+{
+  return getUtxos(address, true);
+}
+
+function getTransactions(txids)
+{
+  return new Promise((resolve, reject) => {
+    peers.getTransactions(txids, {}, (err, res, peer) => {
+      if (!err)
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+// create connections to peers
+peers.connect(async () => {
+  /*var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
+  peers.getBlocks(hashes, {}, (err, res, peer) => {
+    console.log('err=', err, 'res=', res);
+  });*/
+  try {
+    //console.log('calling getUtxosAsync');
+    //let p = await getUtxosAsync("RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu");
+
+    let txhex = await ccfaucet_create('UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed', 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu', FAUCETSIZE*20);
+    //let txhex = await ccfaucet_get('UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq', 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP');
+
+    console.log('txhex=', txhex);
+  }
+  catch(err) {
+    console.log('caught err=', err);
+  }
+  /*peers.getUtxos("RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu", {}, (err, res, peer) => {
+    console.log('err=', err, 'res=', res);
+  });*/
+});
+
+
+/*var getHt = async function () {
     //regtestUtils.height().then( h => console.log('h='+h) );
     var h = await regtestUtils.height();
     console.log('h='+h);
-};
-//getHt()
+};*/
+//getHt();
+
 
 /*regtestUtils.mine(1)
   .then(json => console.log('tx='+json))
@@ -55,7 +176,7 @@ regtestUtils.unspents('RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP')
       console.log('err=', err)
   );*/
 
-  /*
+/*  
 regtestUtils.ccunspents('R9zHrofhRbub7ER77B7NrVch3A63R39GuC')
   .then(
     utxos => console.log('utxos=', utxos)
@@ -67,20 +188,26 @@ regtestUtils.ccunspents('R9zHrofhRbub7ER77B7NrVch3A63R39GuC')
 /*
 ccfaucet_create('UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed', 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu', FAUCETSIZE*20)
   .then(
-    txhex => console.log('txhex=', txhex)
+    txhex => { 
+      console.log('txhex=', txhex);
+      document.write('cc faucet create txhex='+txhex);
+    }
   )
   .catch(
     err => console.log('ccfaucet_create err=', err, 'stack=', err.stack)
   );*/
 
- 
+/* 
 ccfaucet_get('UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq', 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP')
   .then(
-    txhex => console.log('txhex=', txhex)
+    txhex => {
+      console.log('txhex=', txhex);
+      document.write('cc faucet get txhex='+txhex);
+    }
   )
   .catch(
     err => console.log('ccfaucet_get err=', err, 'stack=', err.stack)
-  );
+  );*/
 
 async function ccfaucet_create(wif, myaddress, amount) {
   let tx = await makeFaucetCreateTx(wif, myaddress, amount);
@@ -112,7 +239,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   let addedUnspents = [];
   const txfee = 10000;
   
-  let currentHeight = await regtestUtils.height();
+  //let currentHeight = await regtestUtils.height();
   let added = await addNormalInputs(txbuilder, myaddress, amount+txfee, addedUnspents);
   if (added < amount)
     throw new Error('could not find normal inputs');
@@ -140,9 +267,9 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   txbuilder.addOutput(myaddress, added - amount - txfee);  // change
 
   //txbuilder.setVersion(4);
-  txbuilder.setExpiryHeight(currentHeight+200);
+  //txbuilder.setExpiryHeight(currentHeight+200);
 
-  console.log('tx..:', txbuilder.buildIncomplete().toHex());
+  //console.log('tx..:', txbuilder.buildIncomplete().toHex());
 
   finalizeCCtx(wif, txbuilder, addedUnspents);
   return txbuilder.buildIncomplete();
@@ -162,7 +289,7 @@ async function makeFaucetGetTx(wif, myaddress)
   if (added < amount)
     throw new Error('could not find cc faucet inputs');
   
-  let currentHeight = await regtestUtils.height();
+  //let currentHeight = await regtestUtils.height();
 
   let cond = {
     type:	"threshold-sha-256",
@@ -221,25 +348,34 @@ async function makeFaucetGetTx(wif, myaddress)
 
   //txbuilder.addOutput(spk, amount);
   txbuilder.addOutput(ccSpk, added - amount - txfee);  // change to faucet cc
-  txbuilder.addOutput(myaddress, amount);  // get
+  txbuilder.addOutput(myaddress, amount);  // get to normal
 
   //txbuilder.setVersion(4);
-  txbuilder.setExpiryHeight(currentHeight+200);
+  //txbuilder.setExpiryHeight(currentHeight+200);
 
+  // mine faucet get txpow
   var i = 0;
   var stop = false;
   for(var adj1 = 0; adj1 <= 0xFFFFFFFF && !stop; adj1++)  {
     for(var adj2 = 0; adj2 <= 0xFFFFFFFF && !stop; adj2++)  {
 
-      const conv2buf = num => [
+      const conv2buf = num => { /*[
         (num >> 24) & 255,
         (num >> 16) & 255,
         (num >> 8) & 255,
         num & 255,
-      ];
+      ]*/
+      let buf = Buffer.alloc(4);
+      let bufwr = new bufferutils.BufferWriter(buf);
+      bufwr.writeUInt32(num >>> 0);
+      return buf;
+    };
 
       if (i > 0)
-        txbuilder.__TX.outs.pop();
+        txbuilder.__TX.outs.pop(); // remove the last output to replace it
+      let adj1LE = Buffer.alloc(4);
+      let adj2LE = Buffer.alloc(4);
+
       let scriptSig = script.compile([ script.OPS.OP_RETURN, Buffer.concat([ Buffer.from(conv2buf(adj1 >>> 0)), Buffer.from(conv2buf(adj2 >>> 0)) ]) ]);
       txbuilder.addOutput(scriptSig, 0);
 
@@ -257,7 +393,7 @@ async function makeFaucetGetTx(wif, myaddress)
     }
   }
 
-  console.log('tx..:', txbuilder.buildIncomplete().toHex());
+  //console.log('tx..:', txbuilder.buildIncomplete().toHex());
   
 
   return txbuilder.buildIncomplete();
@@ -265,46 +401,66 @@ async function makeFaucetGetTx(wif, myaddress)
 
 async function addNormalInputs(txbuilder, address, amount, addedUnspents) 
 {
-  const unspents = await regtestUtils.unspents(address);
+  // const unspents = await regtestUtils.unspents(address);  // call via JSON RPC
+  const unspents = await getNormalUtxos(address);     // call via NSPV
+  if (!unspents)
+    return 0;
   //const txns = await regtestUtils.getaddresstxns(address);
   let added = 0;
-  let i = 0;
-  while(i < unspents.length && added < amount)
+  for(let i = 0; i < unspents.utxos.length && added < amount; i ++)
   {
-    //let txid = bufferutils_1.reverseBuffer(Buffer.from(_unspents[i].txId, 'hex'));
-    let txraw = await regtestUtils.fetch(unspents[i].txId);
+    if (unspents.utxos[i].satoshis <= 10000)
+      continue;
+    //let txid = bufferutils.reverseBuffer(Buffer.from(_unspents[i].txId, 'hex'));
+    //let txraw = await regtestUtils.fetch(unspents[i].txId);
+    /*let txarr = await getTransactions([unspents[i].txId]);
+    if (!txarr || txarr.length == 0)
+      throw new Error('could not load vin tx');
+    let txraw = txarr[0];*/
+  
     //console.log('vintx=', txraw.txHex);
-    if (txraw === undefined) 
+    /*if (txraw === undefined) 
       throw new Error('could not load vin tx');
     let tx = Transaction.Transaction.fromHex(txraw.txHex);
-    console.log('adding txId=', tx.getId(), ' vout=', unspents[i].vout);
+    console.log('adding txId=', tx.getId(), ' vout=', unspents[i].vout);*/
     // note: reverse txid string:
-    txbuilder.addInput(tx, unspents[i].vout, null, Buffer.from(unspents[i].script, 'hex'));
-    added += unspents[i].value;
-    addedUnspents.push(unspents[i]);
-    i ++;
+    txbuilder.addInput(unspents.utxos[i].txid, unspents.utxos[i].vout, null, unspents.utxos[i].script);
+    added += unspents.utxos[i].satoshis;
+    //addedUnspents.push(unspents.utxos[i]);
+    addedUnspents.push({ address: address, txId: unspents.utxos[i].txid, vout: unspents.utxos[i].vout, value: unspents.utxos[i].satoshis, script: unspents.utxos[i].script });  // convert to normal inputs-like structure
   }
   return added;
 }
 
 async function addCCInputs(txbuilder, address, amount, addedUnspents) 
 {
-  const unspents = await regtestUtils.ccunspents(address);
+  //const unspents = await regtestUtils.ccunspents(address);
+  const unspents = await getCCUtxos(address);
+  if (!unspents)
+    return 0;
+
   let added = 0;
   let i = 0;
-  while(i < unspents.length && added < amount)
+  while(i < unspents.utxos.length && added < amount)
   {
-    //let txid = bufferutils_1.reverseBuffer(Buffer.from(_unspents[i].txId, 'hex'));
-    let txraw = await regtestUtils.fetch(unspents[i].txid);
+    //let txid = bufferutils.reverseBuffer(Buffer.from(unspents.utxos[i].txid, 'hex'));
+    //let txraw = await regtestUtils.fetch(unspents[i].txid);
+    /*let txarr = await getTransactions([unspents.utxos[i].txid]);
+    if (!txarr || txarr.length == 0)
+      throw new Error('could not load vin tx');
+    let txraw = txarr[0];
+
     //console.log('vintx=', txraw.txHex);
     if (txraw === undefined) 
       throw new Error('could not load vin tx');
     let tx = Transaction.Transaction.fromHex(txraw.txHex);
-    console.log('adding cc txId=', tx.getId(), ' vout=', unspents[i].outputIndex);
+    console.log('adding cc txId=', tx.getId(), ' vout=', unspents[i].outputIndex);*/
     // note: reverse txid string:
-    txbuilder.addInput(tx, unspents[i].outputIndex, null, Buffer.from(unspents[i].script, 'hex'));
-    added += unspents[i].satoshis;
-    addedUnspents.push({ address: unspents[i].address, txId: unspents[i].txid, vout: unspents[i].outputIndex, value: unspents[i].satoshis, script: unspents[i].script });  // convert to normal inputs-like structure
+    txbuilder.addInput(unspents.utxos[i].txid, unspents.utxos[i].vout, null, unspents.utxos[i].script);
+    //txbuilder.addInput(tx, unspents.utxos[i].outputIndex, null, Buffer.from(tx.outs[unspents.utxos[i].outputIndex].script, 'hex'));
+
+    added += unspents.utxos[i].satoshis;
+    addedUnspents.push({ address: address, txId: unspents.utxos[i].txid, vout: unspents.utxos[i].vout, value: unspents.utxos[i].satoshis, script: unspents.utxos[i].script });  // convert to normal inputs-like structure
     i ++;
   }
   return added;
@@ -369,25 +525,26 @@ function hex2Base64(hexString)
 
 function finalizeCCtx(wif, txb, addedUnspents, cccond)
 {
-  let tx = txb.buildIncomplete();
-  for (let index = 0; index < tx.ins.length; index ++)
+  //let tx = txb.buildIncomplete();
+  //for (let index = 0; index < tx.ins.length; index ++)
+  for (let index = 0; index < txb.__INPUTS.length; index ++)
   {
     let unspent = addedUnspents.find((u) => {
-      let txid = bufferutils_1.reverseBuffer(Buffer.from(u.txId, 'hex'));
-      console.log('hash=', tx.ins[index].hash.toString('hex'), ' txId=', txid.toString('hex'));
-      return tx.ins[index].hash.toString('hex') === txid.toString('hex');
+      //let txid = bufferutils.reverseBuffer(Buffer.from(u.txId, 'hex'));
+      let txid = u.txId;
+      //console.log('hash=', tx.ins[index].hash.toString('hex'), ' txId=', txid.toString('hex'));
+      return txb.__TX.ins[index].hash.toString('hex') === txid.toString('hex');
     });
-    if (unspent === undefined) {
-      console.log('internal err: could not find tx unspent in addedUnspents');
-      return;
-    }
+    if (unspent === undefined) 
+      throw new Error('internal err: could not find tx unspent in addedUnspents');
+    
     console.log('unspent.script=', Buffer.from(unspent.script).toString('hex'));
     let keyPairIn = ecpair.fromWIF(wif, networks.dimxy14);
 
     if (!isPayToCryptocondition(txb.__INPUTS[index].prevOutScript))  {
       txb.sign({
         //prevOutScriptType: classify.output(Buffer.from(unspent.script)),
-        prevOutScriptType: getOutScriptTypeFromOutType(txb.__INPUTS[index].prevOutType),  // accessing seemingly an internal var
+        prevOutScriptType: getOutScriptTypeFromOutType(txb.__INPUTS[index].prevOutType),  // TODO: replace accessing seemingly an internal var
         vin: index,
         keyPair: keyPairIn,
         value: unspent.value
@@ -438,4 +595,9 @@ function isPayToCryptocondition(spk)
       return true;
   }
   return false;
+}
+
+function nspvRequest()
+{
+  
 }

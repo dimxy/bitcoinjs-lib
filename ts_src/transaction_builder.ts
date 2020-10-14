@@ -75,6 +75,7 @@ interface TxbOutput {
 interface TxbSignArg {
   prevOutScriptType: string;
   vin: number;
+  value?: number;
   keyPair: Signer;
   redeemScript?: Buffer;
   hashType?: number;
@@ -1235,6 +1236,7 @@ function getSigningData(
   witnessValue?: number,
   witnessScript?: Buffer,
   useLowR?: boolean,
+  value?: number,
 ): SigningData {
   let vin: number;
   if (typeof signParams === 'number') {
@@ -1252,6 +1254,7 @@ function getSigningData(
       hashType,
       witnessValue,
       witnessScript,
+      value,
     } = signParams);
   } else {
     throw new TypeError(
@@ -1323,7 +1326,7 @@ function getSigningData(
     signatureHash = tx.hashForKomodo(
       vin,
       input.signScript as Buffer,
-      input.value as number,
+      value as number,
       hashType,
     );
     console.log('hashForKomodo', signatureHash.toString('hex'));
