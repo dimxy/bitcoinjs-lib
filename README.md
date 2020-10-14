@@ -1,8 +1,4 @@
 # BitcoinJS with Komodo (bitcoinjs-lib-kmd)
-[![Build Status](https://travis-ci.org/bitcoinjs/bitcoinjs-lib.png?branch=master)](https://travis-ci.org/bitcoinjs/bitcoinjs-lib)
-[![NPM](https://img.shields.io/npm/v/bitcoinjs-lib.svg)](https://www.npmjs.org/package/bitcoinjs-lib)
-
-[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 A javascript Bitcoin library for node.js and browsers. Written in TypeScript, but committing the JS files to verify.
 Added support for komodo messages including nSPV and lib cryptoconditions.
