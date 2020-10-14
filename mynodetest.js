@@ -6,11 +6,11 @@
 const TxBuilder=require('./src/transaction_builder');
 const Transaction=require('./src/transaction');
 
-const kmdmessages = require('./kmdmessages');
+const kmdmessages = require('bitcoin-protocol').kmdmessages;
 
 //import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
-//const ccimp = import('pycc/cryptoconditions/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
-const ccimp = require('pycc/cryptoconditions/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
+//const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');   // in browser, use 'wasm-pack build' (no any --target). Don't forget run browerify!
+const ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 const networks = require('./src/networks');
 const bufferutils = require("./src/bufferutils");
@@ -29,10 +29,9 @@ const faucetGlobalPrivkey = Buffer.from([ 0xd4, 0x4f, 0xf2, 0x31, 0x71, 0x7d, 0x
 const faucetGlobalAddress = "R9zHrofhRbub7ER77B7NrVch3A63R39GuC";
 
 var cryptoconditions; // init in top async func
-const APIURL = "http://localhost:8080/1";
-const APIPASS = "satoshi";
-
-const regtestUtils = new netutils.RegtestUtils({ APIPASS, APIURL });
+//const APIURL = "http://localhost:8080/1";
+//const APIPASS = "satoshi";
+// const regtestUtils = new netutils.RegtestUtils({ APIPASS, APIURL });
 
 // for dimxy14
 //var magic = 0x4ea629ab
@@ -115,6 +114,7 @@ function getCCUtxos(address)
   return getUtxos(address, true);
 }
 
+// gets txns only from mempool
 function getTransactions(txids)
 {
   return new Promise((resolve, reject) => {
@@ -365,11 +365,11 @@ async function makeFaucetGetTx(wif, myaddress)
         (num >> 8) & 255,
         num & 255,
       ]*/
-      let buf = Buffer.alloc(4);
-      let bufwr = new bufferutils.BufferWriter(buf);
-      bufwr.writeUInt32(num >>> 0);
-      return buf;
-    };
+        let buf = Buffer.alloc(4);
+        let bufwr = new bufferutils.BufferWriter(buf);
+        bufwr.writeUInt32(num >>> 0);
+        return buf;
+      };
 
       if (i > 0)
         txbuilder.__TX.outs.pop(); // remove the last output to replace it
