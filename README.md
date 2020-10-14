@@ -13,6 +13,7 @@ You need installed:
   wasm-pack to build wasm cryptoconditions module 
   
 If you are going to use this lib in browser you also need:
+
   browserify package 
   a webserver app (for example, webpack dev server)
   a wsproxy app (for example, webcoin-bridge)
@@ -25,7 +26,8 @@ To test this you need a komodod chain with cc enabled (Note about the correct ko
 ## Installation
 
 Clone this git repository go to the new dir and checkout dev-kmd branch.
-Install and build the packages:
+
+Install the node js dependency packages:
 
 ```
 npm install
@@ -33,7 +35,7 @@ npm install
 
 Setup network parameters for your komodo chain:
 Open ts_src/networks.ts and make a new entry for your chain.
-In fact you need to fix yourchainname and the magic param:
+In fact you need to fix yourchainname and the magic param for your chain:
 ```
 export const yourchainname: Network = {
   messagePrefix: '\x18Your-chain-name asset chain:\n',
@@ -60,10 +62,11 @@ In mynodetest.js change mynetwork var to yourchainname
 var mynetwork=networks.yourchainname
 ```
 
-
 Build cryptoconditions wasm module:
+
 Setup the rust nightly build to build cryptoconditions. It looks like the latest nightly build is btoken and cannot use some runtime lib.
 I use this nightly-2020-09-11 build that works well for me:
+
 ```
 rustup toolchain install nightly-2020-09-11
 rustup default nightly-2020-09-11
@@ -88,11 +91,11 @@ const ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');
 
 Run the testapp in nodejs:
 ```
-nodejs ./mynodetest.js
+node ./mynodetest.js
 ```
 
 
-### Build test code for use in the browser
+### How to use the test code in the browser:
 
 To run the test code in the browser you will need a webserver to host an html page and the test code index.js.
 Also you will need a websocket proxy.
@@ -154,6 +157,20 @@ Build the test code for browser:
 browserify mynodetest.js -o index.js
 ```
 Copy index.js into webpack dir.
+Make a simple html page in the webpack dir to run index.js:
+```
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <script src="./index.js"></script>
+  </body>
+</html>
+```
+
 Run the web server with a command:
 ```
 npm run serve
@@ -164,7 +181,7 @@ The web server should be available at http://localhost:8080 url (if you installe
 
 Clone https://github.com/mappum/webcoin-bridge.git repo.
 Change to webcoin-bridge dir.
-run packages install:
+Run packages install:
 ```
 npm install
 ```
