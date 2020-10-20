@@ -11,6 +11,11 @@ import * as types from './types';
 const typeforce = require('typeforce');
 const varuint = require('varuint-bitcoin');
 
+const KMD_TX_VERSION = {
+  SAPLING: 3,
+  OVERWINTER: 4
+};
+
 function varSliceSize(someScript: Buffer): number {
   const length = someScript.length;
 
@@ -85,7 +90,8 @@ export class Transaction {
 
     const tx = new Transaction();
     tx.version = bufferReader.readUInt32();
-    tx.versionGroupId = bufferReader.readUInt32(); // versionGroupId
+    if (tx.version >= KMD_TX_VERSION.SAPLING)
+      tx.versionGroupId = bufferReader.readUInt32(); // versionGroupId
 
     //const marker = bufferReader.readUInt8();
     //const flag = bufferReader.readUInt8();
@@ -129,11 +135,22 @@ export class Transaction {
         throw new Error('Transaction has superfluous witness data');
     }
 
+    if (bufferReader.offset + 4 > buffer.length)
+      return tx;
     tx.locktime = bufferReader.readUInt32();
 
+    if (bufferReader.offset + 4 > buffer.length)
+      return tx;
     tx.nExpiryHeight = bufferReader.readUInt32(); // expiry height
+    
+    if (bufferReader.offset + 8 > buffer.length)
+      return tx;
     bufferReader.readUInt64(); // value balance
-    bufferReader.readVarInt(); // empty vShieldedSpend
+
+    if (bufferReader.offset + 3 > buffer.length)
+      return tx;
+
+    bufferReader.readVarInt(); // empty vShieldedSpend    
     bufferReader.readVarInt(); // empty vShieldedOutput
     bufferReader.readVarInt(); // empty vjoinsplit
 

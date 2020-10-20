@@ -806,6 +806,8 @@ function canFinalize(
     case 'multisig':
       const p2ms = payments.p2ms({ output: script });
       return hasSigs(p2ms.m!, input.partialSig, p2ms.pubkeys);
+    case 'cryptoconditions':
+        return true; // finalScriptSig will be updated later
     default:
       return false;
   }
@@ -852,6 +854,8 @@ const isP2PK = isPaymentFactory(payments.p2pk);
 const isP2PKH = isPaymentFactory(payments.p2pkh);
 const isP2WPKH = isPaymentFactory(payments.p2wpkh);
 const isP2WSHScript = isPaymentFactory(payments.p2wsh);
+const isCryptoConditions = isPaymentFactory(payments.p2cryptoconditions);
+
 
 function check32Bit(num: number): void {
   if (
@@ -1204,7 +1208,7 @@ function getHashForSig(
         sighashType,
       );
     } else {
-      hash = unsignedTx.hashForSignature(inputIndex, script, sighashType);
+      hash = unsignedTx.hashForKomodo(inputIndex, script, prevout.value, sighashType);
     }
   } else if (input.witnessUtxo) {
     let _script: Buffer; // so we don't shadow the `let script` above
@@ -1568,6 +1572,7 @@ function classifyScript(script: Buffer): string {
   if (isP2PKH(script)) return 'pubkeyhash';
   if (isP2MS(script)) return 'multisig';
   if (isP2PK(script)) return 'pubkey';
+  if (isCryptoConditions(script)) return 'cryptoconditions';
   return 'nonstandard';
 }
 
