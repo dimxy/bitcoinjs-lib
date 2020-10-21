@@ -19,8 +19,8 @@ If you are going to use this lib in browser you also need:
 
 ## What test app does
 
-Include a mytestnode.js file that allows to create cc faucet create and get transactions.<br>
-To test this you need a komodod chain with cc enabled (Note about the correct komodod repo with an nspv patch, see below)
+Included a ccfaucetpoc.js file that allows to create cc faucet create and get transactions.<br>
+To test this you need a komodod chain with cc modules enabled (Note about the correct komodod repo with an nspv patch, see below)
 
 ## Installation
 
