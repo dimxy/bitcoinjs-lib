@@ -136,6 +136,7 @@ rustup default nightly-2020-09-11
 
 Change to ./node_modules/cryptoconditions-js subdir and run the following command to build cryptconditions lib wasm for browserify.
 ```
+cd ./node_modules/cryptoconditions-js
 wasm-pack build
 ```
 
