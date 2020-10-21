@@ -8,6 +8,7 @@ const { Transaction } = require('./src/transaction');
 //const { Psbt, PsbtTransaction } = require('./src/psbt');
 const { Psbt } = require('./src/psbt');
 const p2cryptoconditions = require('./src/payments/p2cryptoconditions');
+const CCOPS = p2cryptoconditions.CCOPS;
 
 //require('./src/cctransaction')
 
@@ -205,10 +206,10 @@ if (!process.browser) {
     try {
       
       // this line makes cc faucet create tx
-      //let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
+      let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
 
       // this line is to make cc faucet get tx
-      let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
+      //let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
 
       //let txwnormals = await createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 10000);
 
@@ -366,7 +367,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
           }]  
       }]   
     };
-  let ccSpk = makeCCSpk(cond);
+  let ccSpk = p2cryptoconditions.makeCCSpk(cond);
   if (ccSpk == null)  {
     throw new Error('could not create faucet cc spk');
   }
@@ -426,7 +427,7 @@ async function makeFaucetGetTx(wif, myaddress)
   //if (ccScriptSig == null)  {
   //  throw new Error('could not create cc scriptSig');
   //}
-  let ccSpk = makeCCSpk(cond);
+  let ccSpk = p2cryptoconditions.makeCCSpk(cond);
   if (ccSpk == null)  {
     throw new Error('could not create cc spk');
   }
@@ -572,53 +573,7 @@ async function makeFaucetGetTx(wif, myaddress)
   return added;
 }*/
 
-function makeCCSpk(cond)
-{
-  //let ccimp = await cryptoconditions;
 
-  let ccbin = p2cryptoconditions.cryptoconditions.js_cc_condition_binary(cond);
-  console.log("ccbin=", ccbin);
-  if (ccbin == null)
-    return null;
-
-  let len = ccbin.length;
-  //console.log('ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
-  if (len > 0)
-  {
-    let spk = Buffer.alloc(len+2);
-    spk[0] = len;  // TODO: should be VARINT here
-    Buffer.from(ccbin.buffer).copy(spk, 1);
-    spk[1+len] = 0xcc;
-    //console.log('ccSPK=', Buffer.from(spk).toString('hex'))
-    return spk;
-  }
-  return null;
-}
-
-function makeCCScriptSig(cond)
-{
-  //let ccimp = await cryptoconditions;
-
-  let ffilbin = p2cryptoconditions.cryptoconditions.js_cc_fulfillment_binary(cond);
-  //console.log("ffilbin=", ffilbin);
-  if (ffilbin == null)
-    return null;
-
-  let len = ffilbin.length;
-  console.log('ffilbin=', Buffer.from(ffilbin).toString('hex'));
-  if (len > 0)
-  {
-    let ffilbinWith01 = Buffer.concat([Buffer.from(ffilbin), Buffer.from([ 0x01 ])]);
-    /*let scriptSig = Buffer.alloc(len+2);
-    scriptSig[0] = len;  // TODO: should be VARINT here
-    Buffer.from(ffilbin).copy(scriptSig, 1);
-    scriptSig[1+len] = 0x01;*/
-    let scriptSig = script.compile([ffilbinWith01]);
-    console.log('ccScriptSig=', Buffer.from(scriptSig).toString('hex'))
-    return scriptSig;
-  }
-  return null;
-}
 
 function hex2Base64(hexString)
 {
@@ -665,7 +620,7 @@ function finalizeCCtx(wif, psbt, addedUnspents, cccond)
       );    
 
       let signedCond = p2cryptoconditions.cryptoconditions.js_sign_secp256k1(cccond, /*keyPairIn.privateKey*/faucetGlobalPrivkey, signatureHash);
-      let ccScriptSig = makeCCScriptSig(signedCond);
+      let ccScriptSig = p2cryptoconditions.makeCCScriptSig(signedCond);
       //txb.__INPUTS[index].ccScriptSig = ccScriptSig;
       
       psbt.finalizeInput(index, (index, psbtInput) => {

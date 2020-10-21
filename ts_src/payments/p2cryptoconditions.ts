@@ -1,9 +1,12 @@
 import { bitcoin as BITCOIN_NETWORK } from '../networks';
-//import * as bscript from '../script';
+import * as bscript from '../script';
 import { Payment, PaymentOpts/*, StackFunction*/ } from './index';
 //import * as lazy from './lazy';
 const typef = require('typeforce');
 //const OPS = bscript.OPS;
+export const CCOPS = {
+  OP_CRYPTOCONDITIONS: 0xCC
+};
 
 //export var cryptoconditions: any;// = require('cryptoconditions-js/pkg/cryptoconditions.js'); //async, must be loaded in outercalls
 //if (process.browser)
@@ -67,7 +70,7 @@ export function isPayToCryptocondition(spk: Buffer) : boolean
 
   //let cryptoconditions = ccimp;
   if (cryptoconditions === undefined)
-    throw new Error ("cryptoconditions lib lot available");
+    throw new Error("cryptoconditions lib not available");
 
   //console.log('IsPayToCryptocondition spk=', spk.toString('hex'));
   if (Buffer.isBuffer(spk) && spk.length >= 46 && spk[spk.length-1] == 0xcc)  {
@@ -78,4 +81,54 @@ export function isPayToCryptocondition(spk: Buffer) : boolean
       return true;
   }
   return false;
+}
+
+export function makeCCSpk(cond: Buffer) : Buffer
+{
+  if (cryptoconditions === undefined)
+    throw new Error("cryptoconditions lib not available");
+
+  let ccbin = cryptoconditions.js_cc_condition_binary(cond);
+  console.log("ccbin=", ccbin);
+  if (ccbin == null)
+    return Buffer.from([]);
+
+  let len = ccbin.length;
+  //console.log('ccbin=', Buffer.from(ccbin.buffer).toString('hex'));
+  if (len > 0)
+  {
+    //let spk = Buffer.alloc(len+2);
+    //spk[0] = len;  // TODO: should be VARINT here
+    //Buffer.from(ccbin.buffer).copy(spk, 1);
+    //spk[1+len] = CCOPS.OP_CRYPTOCONDITIONS;
+    let spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS]);
+    return spk;
+  }
+  return Buffer.from([]);
+}
+
+export function makeCCScriptSig(cond: Buffer): Buffer
+{
+  if (cryptoconditions === undefined)
+    throw new Error("cryptoconditions lib not available");
+
+  let ffilbin = cryptoconditions.js_cc_fulfillment_binary(cond);
+  //console.log("ffilbin=", ffilbin);
+  if (ffilbin == null)
+    return Buffer.from([]);
+
+  let len = ffilbin.length;
+  console.log('ffilbin=', Buffer.from(ffilbin).toString('hex'));
+  if (len > 0)
+  {
+    let ffilbinWith01 = Buffer.concat([Buffer.from(ffilbin), Buffer.from([ 0x01 ])]);
+    /*let scriptSig = Buffer.alloc(len+2);
+    scriptSig[0] = len;  // TODO: should be VARINT here
+    Buffer.from(ffilbin).copy(scriptSig, 1);
+    scriptSig[1+len] = 0x01;*/
+    let scriptSig = bscript.compile([ffilbinWith01]);
+    console.log('ccScriptSig=', Buffer.from(scriptSig).toString('hex'));
+    return scriptSig;
+  }
+  return Buffer.from([]);
 }
