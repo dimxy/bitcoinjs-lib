@@ -34,7 +34,7 @@ npm install
 
 Setup network parameters for your komodo chain:<br>
 Open ts_src/networks.ts and make a new entry for your chain.<br>
-In fact you need to fix yourchainname and the magic param for your chain:
+In fact you need to fix the yourchainname and magic params for your chain:
 ```
 export const yourchainname: Network = {
   messagePrefix: '\x18Your-chain-name asset chain:\n',
