@@ -8,15 +8,14 @@ Released under the terms of the [MIT LICENSE](LICENSE).
 ## Prerequisites
 
 You need installed:
-  nodejs
-  rust
-  wasm-pack to build wasm cryptoconditions module 
+  - nodejs v.12+<br>
+  - rust<br>
+  - wasm-pack to build wasm cryptoconditions module<br> 
   
 If you are going to use this lib in browser you also need:
-
-  browserify package 
-  a webserver app (for example, webpack dev server)
-  a wsproxy app (for example, webcoin-bridge)
+  - browserify package<br> 
+  - a webserver app (for example, webpack dev server)<br>
+  - a wsproxy app (for example, webcoin-bridge)
 
 ## What test app does
 
