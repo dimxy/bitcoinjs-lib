@@ -41,7 +41,7 @@ const faucetcreateaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
 const faucetgetwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
 const faucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
 
-var cryptoconditions = require('./src/payments/p2cryptoconditions').cryptoconditions; // should be inited in top async func
+//var cryptoconditions = require('./src/payments/p2cryptoconditions').cryptoconditions; // should be inited in top async func
 
 //const APIURL = "http://localhost:8080/1";
 //const APIPASS = "satoshi";
@@ -325,7 +325,8 @@ function addInputsFromPreviousTxns(psbt, tx, prevTxnsHex)
 async function makeFaucetCreateTx(wif, myaddress, amount) 
 {
   // init lib cryptoconditions
-  cryptoconditions = await ccimp;  // always ensure cc is loaded
+  //cryptoconditions = await ccimp;  // always ensure cc is loaded
+  p2cryptoconditions.cryptoconditions = await ccimp;
 
   //const txbuilder = new TxBuilder.TransactionBuilder(mynetwork);
   let addedUnspents = [];
@@ -385,7 +386,8 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
 async function makeFaucetGetTx(wif, myaddress) 
 {
   // init lib cryptoconditions
-  cryptoconditions = await ccimp;  // always ensure cc is loaded
+  //cryptoconditions = await ccimp;  // always ensure cc is loaded
+  p2cryptoconditions.cryptoconditions = await ccimp;
 
   //const txbuilder = new TxBuilder.TransactionBuilder(mynetwork);
 
@@ -574,7 +576,7 @@ function makeCCSpk(cond)
 {
   //let ccimp = await cryptoconditions;
 
-  let ccbin = cryptoconditions.js_cc_condition_binary(cond);
+  let ccbin = p2cryptoconditions.cryptoconditions.js_cc_condition_binary(cond);
   console.log("ccbin=", ccbin);
   if (ccbin == null)
     return null;
@@ -597,7 +599,7 @@ function makeCCScriptSig(cond)
 {
   //let ccimp = await cryptoconditions;
 
-  let ffilbin = cryptoconditions.js_cc_fulfillment_binary(cond);
+  let ffilbin = p2cryptoconditions.cryptoconditions.js_cc_fulfillment_binary(cond);
   //console.log("ffilbin=", ffilbin);
   if (ffilbin == null)
     return null;
@@ -662,7 +664,7 @@ function finalizeCCtx(wif, psbt, addedUnspents, cccond)
         Transaction.SIGHASH_ALL,
       );    
 
-      let signedCond = cryptoconditions.js_sign_secp256k1(cccond, /*keyPairIn.privateKey*/faucetGlobalPrivkey, signatureHash);
+      let signedCond = p2cryptoconditions.cryptoconditions.js_sign_secp256k1(cccond, /*keyPairIn.privateKey*/faucetGlobalPrivkey, signatureHash);
       let ccScriptSig = makeCCScriptSig(signedCond);
       //txb.__INPUTS[index].ccScriptSig = ccScriptSig;
       
