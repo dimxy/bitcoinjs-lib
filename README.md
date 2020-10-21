@@ -64,15 +64,15 @@ Set your funding faucet wif and address and a wif and address getting funds in m
 
 ## Build test app to run in nodejs
 
-Build cryptoconditions wasm module:<br>
-Setup the rust nightly build to build cryptoconditions. It looks like the latest nightly build is broken and omitted some runtime lib.
-I use this nightly-2020-09-11 build that works well for me:
+Build the cryptoconditions wasm module:<br>
+Setup the rust nightly build to build cryptoconditions. It looks like the current latest October 2020 nightly build is broken and omitted some runtime lib.
+I use this 'nightly-2020-09-11' build that worked well for me:
 ```
 rustup toolchain install nightly-2020-09-11
 rustup default nightly-2020-09-11
 ```
 
-Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs:
+Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs target:
 ```
 cd ./node_modules/cryptoconditions-js
 wasm-pack build -t nodejs
@@ -83,7 +83,6 @@ Run the testapp in nodejs:
 node ./ccfaucetpoc.js
 ```
 
-
 ## How to use the test app in the browser:
 
 To run the test app in the browser you will need a webserver to host an html page and the test app index.js.
@@ -92,7 +91,7 @@ Also you will need a websocket proxy.
 ### Setting up a web server
 
 I use webpack dev server running in nodejs.<br>
-To set it up make a dir like 'webpack' and create in it two files with the following content:
+To setup a webpack sample config make a dir like 'webpack' and create inside it two files with the following content:
 
 package.json:
 ```
@@ -123,8 +122,8 @@ module.exports = {
   mode: "development"
 };
 ```
-(Both package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
-Inside webpack dir run: 
+(Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
+Inside the webpack dir run: 
 ```
 npm install
 ``` 
@@ -148,7 +147,7 @@ browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpo
 ```
 Copy ccfaucetpocbr.js into your webpack dir.
 Copy an example of an index.html page from the webpack-test dir to your webpack dir.
-Run the web server with a command:
+Inside your webpack dir run the web server with a command:
 ```
 npm run serve
 ```
