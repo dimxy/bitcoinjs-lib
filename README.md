@@ -55,12 +55,12 @@ Rebuild nodejs packages:
 npm run build
 ```
 
-In mynodetest.js change mynetwork var to yourchainname:<br>
+In ccfaucetpoc.js change mynetwork var to yourchainname:<br>
 ```
 var mynetwork=networks.yourchainname
 ```
 
-Set your funding faucet wif and address and a wif and address getting funds in mynodetest.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
+Set your funding faucet wif and address and a wif and address getting funds in ccfaucetpoc.js (set vars faucetcreatewif, faucetcreateaddress, faucetgetwif, faucetgetaddress).<br>
 
 ## Build test app to run in nodejs
 
@@ -85,12 +85,12 @@ node ./ccfaucetpoc.js
 
 ## How to use the test app in the browser:
 
-To run the test app in the browser you will need a webserver to host an html page and the test app index.js.
-Also you will need a websocket proxy.
+To run the test app in the browser you will need a webserver to host an html sample page and the test app ccfaucetpocbr.js.
+Also you need a websocket proxy to convert websockets into nspv p2p protocol.
 
 ### Setting up a web server
 
-I use webpack dev server running in nodejs.<br>
+I use the webpack dev server running in nodejs.<br>
 To setup a webpack sample config make a dir like 'webpack' and create inside it two files with the following content:
 
 package.json:
