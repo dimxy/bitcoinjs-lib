@@ -146,8 +146,8 @@ Rebuild sources and build the test app for browser:
 npm run build
 browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
-Copy ccfaucetpocbr.js into your webpack dir.
-Copy an example of an index.html page from the webpack-test dir to your webpack dir.
+Copy created ccfaucetpocbr.js into your webpack dir.
+Copy the example of an index.html page from the webpack-test dir to your webpack dir.
 Inside your webpack dir run the web server with a command:
 ```
 npm run serve
