@@ -123,8 +123,8 @@ module.exports = {
   mode: "development"
 };
 ```
-
-Inside webpack dir run 
+(Both package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
+Inside webpack dir run: 
 ```
 npm install
 ``` 
@@ -146,7 +146,7 @@ Rebuild sources and build the test app for browser:
 npm run build
 browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
-Copy ccfaucetpocbr.js into the webpack dir.
+Copy ccfaucetpocbr.js into your webpack dir.
 Copy an example of an index.html page from the webpack-test dir to your webpack dir.
 Run the web server with a command:
 ```
