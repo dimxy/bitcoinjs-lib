@@ -73,20 +73,15 @@ rustup toolchain install nightly-2020-09-11
 rustup default nightly-2020-09-11
 ```
 
-Change to cryptoconditions-js directory and build the cryptoconditions wasm module:
+Change to cryptoconditions-js directory and build the cryptoconditions wasm module for nodejs:
 ```
 cd ./node_modules/cryptoconditions-js
 wasm-pack build -t nodejs
 ```
 
-In testapp mynodetest.js use (uncomment) this statement to load cryptoconditions in nodejs:
-```
-const ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');
-```
-
 Run the testapp in nodejs:
 ```
-node ./mynodetest.js
+node ./ccfaucetpoc.js
 ```
 
 
@@ -97,8 +92,8 @@ Also you will need a websocket proxy.
 
 ### Setting up a web server
 
-I use webpack dev server, running in nodejs.<br>
-To set it up make a dir like webpack and create in it two files with the following content:
+I use webpack dev server running in nodejs.<br>
+To set it up make a dir like 'webpack' and create in it two files with the following content:
 
 package.json:
 ```
@@ -121,10 +116,10 @@ webpack.config.js:
 ```
 const path = require('path');
 module.exports = {
-  entry: "./index.js",
+  entry: "./ccpfaucetpocbr.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "index.js",
+    filename: "ccpfaucetpocbr-bundle.js",
   },
   mode: "development"
 };
@@ -147,30 +142,13 @@ wasm-pack build
 ```
 
 Now go to bitcoinjs-lib-kmd repo dir.<br>
-In the test app mynodetest.js use (uncomment) this statement to load cryptoconditions for browser:
+Rebuild sources and build the test app for browser:
 ```
-const ccimp = import('cryptoconditions-js/pkg/cryptoconditions.js');
+npm run build
+browserify ../bitcoinjs-lib-kmd/ccfaucetpoc.js --standalone faucet -o ccfaucetpocbr.js
 ```
-
-Build the test app for browser:
-```
-browserify mynodetest.js -o index.js
-```
-Copy index.js into the webpack dir.
-Make a simple html page in the webpack dir to run index.js:
-```
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>hello-wasm example</title>
-  </head>
-  <body>
-    <script src="./index.js"></script>
-  </body>
-</html>
-```
-
+Copy ccfaucetpocbr.js into the webpack dir.
+Copy an example of an index.html page from the webpack-test dir to your webpack dir.
 Run the web server with a command:
 ```
 npm run serve
@@ -201,9 +179,7 @@ var dnsSeeds = [
 
 var staticPeers = [ 'localhost:<your-chain-p2p-port>' ];
 
-var webSeeds = [
-// TODO: add more
-];
+var webSeeds = [];
 
 module.exports = {
   magic: magic,
@@ -220,7 +196,7 @@ Now run the ws bridge from webcoin-bridge dir:
 node ./bin/bridge.js --network ../src/webcoin-yourchainname
 ```
 WS Proxy should be available on the default port 8192.<br>
-The mynodetest.js test app also has this port configured by default.
+The ccfaucetpos.js test app also has this port configured by default in its code (see webSeeds var in ccfaucetpoc.js file).
 
 
 ### Use the correct komodod version
