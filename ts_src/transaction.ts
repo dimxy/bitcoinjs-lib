@@ -12,8 +12,8 @@ const typeforce = require('typeforce');
 const varuint = require('varuint-bitcoin');
 
 const KMD_TX_VERSION = {
-  SAPLING: 3,
-  OVERWINTER: 4
+  OVERWINTER: 3,
+  SAPLING: 4
 };
 
 function varSliceSize(someScript: Buffer): number {
@@ -90,9 +90,11 @@ export class Transaction {
 
     const tx = new Transaction();
     tx.version = bufferReader.readUInt32();
-    if (tx.version >= KMD_TX_VERSION.SAPLING)
+    const versionStripped = (tx.version >>> 0) & (~(1 << 31) >>> 0);
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
       tx.versionGroupId = bufferReader.readUInt32(); // versionGroupId
 
+    // no witnesses in komodo:
     //const marker = bufferReader.readUInt8();
     //const flag = bufferReader.readUInt8();
 
@@ -135,29 +137,35 @@ export class Transaction {
         throw new Error('Transaction has superfluous witness data');
     }
 
-    if (bufferReader.offset + 4 > buffer.length)
-      return tx;
+    function checkOffset(size: number) : boolean {
+      if (bufferReader.offset == buffer.length)
+        return false;
+      else if (bufferReader.offset + size > buffer.length)
+        throw new Error('Transaction has invalid data alignment');
+      return true;
+    }
+
+    if (!checkOffset(4)) return tx; // no space for zcash data
     tx.locktime = bufferReader.readUInt32();
-
-    if (bufferReader.offset + 4 > buffer.length)
-      return tx;
+    if (!checkOffset(4)) return tx;
     tx.nExpiryHeight = bufferReader.readUInt32(); // expiry height
-    
-    if (bufferReader.offset + 8 > buffer.length)
-      return tx;
-    bufferReader.readUInt64(); // value balance
-
-    if (bufferReader.offset + 3 > buffer.length)
-      return tx;
-
-    bufferReader.readVarInt(); // empty vShieldedSpend    
-    bufferReader.readVarInt(); // empty vShieldedOutput
-    bufferReader.readVarInt(); // empty vjoinsplit
-
+    if (!checkOffset(8)) return tx;
+    const valueBalance = bufferReader.readUInt64(); // value balance
+    if (valueBalance != 0)
+      throw new Error('Zcash transactions not supported');
+    if (!checkOffset(3)) return tx;  // space for next 3 varints   
+    const vShieldedSpendSize = bufferReader.readVarInt(); // empty vShieldedSpend
+    if (vShieldedSpendSize != 0)
+      throw new Error('Zcash transactions not supported');
+    const vShieldedOutputSize = bufferReader.readVarInt(); // empty vShieldedOutput
+    if (vShieldedOutputSize != 0)
+      throw new Error('Zcash transactions not supported');
+    const vJoinSplitSize = bufferReader.readVarInt(); // empty vjoinsplit
+    if (vJoinSplitSize != 0)
+      throw new Error('Zcash transactions not supported');
     if (_NO_STRICT) return tx;
     if (bufferReader.offset !== buffer.length)
       throw new Error('Transaction has unexpected data');
-
     return tx;
   }
 
@@ -503,11 +511,11 @@ export class Transaction {
       bufferWriter.writeUInt32(txIn.index);
     });
 
-    console.log('prevouts tbuffer', tbuffer.toString('hex'));
+    //console.log('prevouts tbuffer', tbuffer.toString('hex'));
     let b = new blake2b(32, null, null, ZCASH_PREVOUTS_HASH_PERSONALIZATION);
     b.update(tbuffer);
     b.digest(hashPrevouts);
-    console.log('hashPrevouts=', hashPrevouts.toString('hex'));
+    //console.log('hashPrevouts=', hashPrevouts.toString('hex'));
     
     tbuffer = Buffer.allocUnsafe(4 * this.ins.length);
     bufferWriter = new BufferWriter(tbuffer, 0);
@@ -549,32 +557,31 @@ export class Transaction {
     //bufferWriter.writeUInt64(value);
     //bufferWriter.writeUInt32(input.sequence);
     bufferWriter.writeSlice(hashOutputs);
-    console.log('hashOutputs', tbuffer.toString('hex'))
+    //console.log('hashOutputs', tbuffer.toString('hex'))
 
 
     bufferWriter.writeSlice(emptyHash);   // JoinSplits
     bufferWriter.writeSlice(emptyHash);   // Spend descriptions
     bufferWriter.writeSlice(emptyHash);   // Output descriptions
-    console.log('3 empty hash', tbuffer.toString('hex'))
+    //console.log('3 empty hash', tbuffer.toString('hex'))
     bufferWriter.writeUInt32(this.locktime);
     bufferWriter.writeUInt32(this.nExpiryHeight);  // ExpiryHeight
     bufferWriter.writeUInt64(0); // value balance
     bufferWriter.writeUInt32(hashType);
-    console.log('locktime', tbuffer.toString('hex'))
+    //console.log('locktime', tbuffer.toString('hex'))
 
     if (inIndex >= 0) { // TODO: check if 'not and input'
-    console.log('input.hash')
+      //console.log('input.hash')
 
       bufferWriter.writeSlice(input.hash);
       bufferWriter.writeUInt32(input.index);
       bufferWriter.writeVarSlice(prevOutScript);
       bufferWriter.writeUInt64(value);
       bufferWriter.writeUInt32(input.sequence);
-      console.log('input.hash', tbuffer.toString('hex'))
-
+      //console.log('input.hash', tbuffer.toString('hex'))
     }
 
-    console.log('tbuffer=', tbuffer.toString('hex'));
+    //console.log('tbuffer=', tbuffer.toString('hex'));
     b = new blake2b(32, null, null, ZCASH_SIG_HASH_SAPLING_PERSONALIZATION);
     b.update(tbuffer);
     b.digest(sigHash);
