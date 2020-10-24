@@ -8,11 +8,10 @@ const { Transaction } = require('./src/transaction');
 //const { Psbt, PsbtTransaction } = require('./src/psbt');
 const { Psbt } = require('./src/psbt');
 const p2cryptoconditions = require('./src/payments/p2cryptoconditions');
-const CCOPS = p2cryptoconditions.CCOPS;
 
 //require('./src/cctransaction')
 
-const kmdmessages = require('bitcoin-protocol').kmdmessages;
+const kmdmessages = require('./src/net/kmdmessages');
 
 //import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
 var ccimp;
@@ -56,7 +55,8 @@ const faucetgetaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
 var defaultPort = 14722
 
 var dnsSeeds = [
-  "localhost"
+//  'seed.bitcoin.sipa.be', 'dnsseed.bluematt.me', 'dnsseed.bitcoin.dashjr.org', 'seed.bitcoinstats.com', 'seed.bitnodes.io', 'bitseed.xf2.org', 'seed.bitcoin.jonasschnelli.ch'
+//  "localhost"
 ]
 var webSeeds = [
   'ws://localhost:8192'
@@ -72,8 +72,8 @@ var params = {
   defaultPort: defaultPort,
   dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,
-  staticPeers: staticPeers,
-  connectWeb: true,
+  staticPeers: staticPeers,  // dnsSeed works also
+  //connectWeb: true,
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
@@ -84,19 +84,27 @@ var opts = {
 }
 
 // create peer group
-var PeerGroup = require('bitcoin-net').PeerGroup
-var peers = new PeerGroup(params, opts)
+//var PeerGroup = require('bitcoin-net').PeerGroup
+var NspvPeerGroup = require('./src/net/nspvPeerGroup')
+require('./src/net/nspvPeer')
 
-peers.on('peer', (peer) => {
-  console.log('connected to peer', peer.socket.remoteAddress)
- 
-  // send/receive messages
-  peer.once('pong', () => console.log('received ping response'))
-  peer.send('ping', {
-    nonce: require('crypto').pseudoRandomBytes(8)
+var peers;
+
+if (!process.browser) 
+{
+  peers = new NspvPeerGroup(params, opts);
+  // start pinging
+  peers.on('peer', (peer) => {
+    console.log('connected to peer', peer.socket.remoteAddress)
+  
+    // send/receive messages
+    peer.once('pong', () => console.log('received ping response'))
+    peer.send('ping', {
+      nonce: require('crypto').pseudoRandomBytes(8)
+    })
+    console.log('sent ping')
   })
-  console.log('sent ping')
-})
+}
  
 /*
 peers.on('getBlocks', (peer) => {
@@ -180,43 +188,72 @@ function getCCUtxos(address)
 
 function Connect()
 {
+  peers = new NspvPeerGroup(params, opts);
+  /*peers.on('peer', (peer) => {
+    console.log('in event: connected to peer', peer.socket.remoteAddress)
+  
+    // send/receive messages
+    peer.once('pong', () => console.log('received ping response'))
+    peer.send('ping', {
+      nonce: require('crypto').pseudoRandomBytes(8)
+    })
+    console.log('sent ping')
+  });*/
+
   return new Promise((resolve, reject) => {
-    peers.connect((err, res, peer) => {
-      if (!err)
-        resolve(res, peer);
-      else
-        reject(err);
+
+    peers.on('connectError', (err, peer)=>reject(err, peer));
+    peers.on('peerError', (err)=>reject(err));
+    peers.on('error', (err)=>reject(err));
+
+    peers.connect(() => {
+      console.log('in promise: connected to peer!!!');
+      resolve();
     });
   });
 }
 
 exports.Connect = Connect;
 
-//export { Connect1 };
-
-// create connections to peers
-if (!process.browser) {
+// Example calls running under nodejs
+if (!process.browser) 
+{
+  // create connections to peers
   peers.connect(async () => {
-    /* test get blocks:
-    var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
-    peers.getBlocks(hashes, {}, (err, res, peer) => {
-      console.log('err=', err, 'res=', res);
-    });*/
+  
 
     try {
       
-      // this line makes cc faucet create tx
-      let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
+      // test get blocks from peer (TODO: update for kmd block and transactions support) : 
+      // var hashes = [  bufferutils.reverseBuffer(Buffer.from("099751509c426f89a47361fcd26a4ef14827353c40f42a1389a237faab6a4c5d", 'hex')) ];
+      // let blocks = peers.getBlocks(hashes, {});
+      // console.log('blocks:', blocks);
 
-      // this line is to make cc faucet get tx
-      //let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
+      // get normal utxos from an address:
+      let utxos = await getNormalUtxos(faucetcreateaddress);
+      console.log('utxos=', utxos);
 
-      //let txwnormals = await createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 10000);
+      // it should be at least 1 sec between the same nspv requests (here NSPV_UTXOS)
+      var t0 = new Date().getSeconds();
+      do {
+        var t1 = new Date().getSeconds();
+      } while(t1 == t0);
 
-      // uncomment this line to print txhex in browser:
-      //document.write('cc faucet txhex='+txhex);
-      console.log('txhex=', txhex);
-      //console.log('txwnormals=', txwnormals);
+      // get cc utxos:
+      let ccutxos = await getCCUtxos(faucetGlobalAddress);
+      console.log('cc utxos=', ccutxos); 
+
+      // make cc faucet create tx
+      // let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
+      // console.log('txhex=', txhex);
+
+      // make cc faucet get tx
+      // let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
+      // console.log('txhex=', txhex);
+
+      // make tx with normal inputs for the specified amount
+      // let txwnormals = await createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 10000);
+      // console.log('txwnormals=', txwnormals);
     }
     catch(err) {
       console.log('caught err=', err, 'code=', err.code, 'message=', err.message);
@@ -462,13 +499,10 @@ async function makeFaucetGetTx(wif, myaddress)
       if (added < amount)
         throw new Error('could not find cc faucet inputs');
 
-      let iOutput = 0;
       psbt.addOutput({ script: ccSpk, value: added - amount - txfee });  // change to faucet cc
-      iOutput ++;
       psbt.addOutput({ address: myaddress, value: amount });  // get to normal
-      iOutput ++;
 
-      const conv2buf = num => { /*[
+      const num2Uint32 = num => { /*[
         (num >> 24) & 255,
         (num >> 16) & 255,
         (num >> 8) & 255,
@@ -485,7 +519,8 @@ async function makeFaucetGetTx(wif, myaddress)
       //let adj1LE = Buffer.alloc(4);
       //let adj2LE = Buffer.alloc(4);
 
-      let opreturn = script.compile([ script.OPS.OP_RETURN, Buffer.concat([ Buffer.from(conv2buf(adj1 >>> 0)), Buffer.from(conv2buf(adj2 >>> 0)) ]) ]);
+      // adjust nonces:
+      let opreturn = script.compile([ script.OPS.OP_RETURN, Buffer.concat([ Buffer.from(num2Uint32(adj1 >>> 0)), Buffer.from(num2Uint32(adj2 >>> 0)) ]) ]);
       psbt.addOutput({ script: opreturn, value: 0 });
      
       finalizeCCtx(wif, psbt, [], cond);
@@ -628,7 +663,6 @@ function finalizeCCtx(wif, psbt, addedUnspents, cccond)
         //  psbtInput.finalScriptSig = undefined;  // 'un-finalize' psbt output. No need of this as we now recreating all inputs/outputs for each faucet get txpow try
         return { finalScriptSig: ccScriptSig };  // looks like a hack but to avoid extra psbt after-signing checks 
       });
-
       //console.log('signed cccond=', signedCond);
     }
   }
