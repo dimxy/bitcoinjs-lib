@@ -11,7 +11,7 @@ const p2cryptoconditions = require('./src/payments/p2cryptoconditions');
 
 //require('./src/cctransaction')
 
-const kmdmessages = require('./src/net/kmdmessages');
+const kmdmessages = require('./net/kmdmessages');
 
 //import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
 var ccimp;
@@ -85,8 +85,8 @@ var opts = {
 
 // create peer group
 //var PeerGroup = require('bitcoin-net').PeerGroup
-var NspvPeerGroup = require('./src/net/nspvPeerGroup')
-require('./src/net/nspvPeer')
+var NspvPeerGroup = require('./net/nspvPeerGroup')
+require('./net/nspvPeer')
 
 var peers;
 
