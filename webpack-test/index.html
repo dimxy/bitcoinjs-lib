@@ -59,14 +59,14 @@
 
   function myConnect() {
     myLibrary.Connect()
-      .then((r,p)=>{ 
-        //document.write('connected to peer'+ p.toString()); 
-        console.log('r=', r, 'p=', p)
+      .then(()=>{ 
+        console.log('in browser: connected to peer'); 
+        //console.log('res:', res, 'peer:', peer)
         document.getElementById("idConnectRes").innerHTML = 'connected';
       }) 
-      .catch(e=> {
-        document.write('connect error: '+e.message);
-        document.getElementById("idConnectRes").innerHTML = 'error: '+e.message;
+      .catch((err, peer) => {
+        console.log('connect error:', err, 'peer:', peer);
+        document.getElementById("idConnectRes").innerHTML = 'connect error: '+err.message;
       })
   }
 
@@ -75,9 +75,9 @@
       .then((txhex)=>{ 
         document.getElementById("idFaucetCreateRes").innerHTML = 'TXHEX CREATE: '+txhex;
       }) 
-      .catch(e=>{
-        console.log('error', e)
-        document.getElementById("idFaucetCreateRes").innerHTML = 'error: '+e.message;
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idFaucetCreateRes").innerHTML = 'create tx error: '+err.message;
       })
   }
 
@@ -87,9 +87,9 @@
       .then((txhex)=>{ 
         document.getElementById("idFaucetGetRes").innerHTML = 'TXHEX GET: '+txhex;
       }) 
-      .catch(e=>{
-        console.log('error', e)
-        document.getElementById("idFaucetGetRes").innerHTML = 'error: '+e.message;
+      .catch(err=>{
+        console.log('get error=', err)
+        document.getElementById("idFaucetGetRes").innerHTML = 'create tx error: '+err.message;
       })
   }
 
