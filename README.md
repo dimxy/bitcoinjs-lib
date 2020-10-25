@@ -114,7 +114,7 @@ webpack.config.js:
 ```
 const path = require('path');
 module.exports = {
-  entry: "./ccpfaucetpocbr.js",
+  entry: "./ccfaucetpocbr.js",
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "ccpfaucetpocbr-bundle.js",
