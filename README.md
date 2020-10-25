@@ -118,6 +118,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "ccfaucetpocbr-bundle.js",
+    library: 'myLibrary'
   },
   mode: "development"
 };
