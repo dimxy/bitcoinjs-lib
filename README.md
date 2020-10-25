@@ -216,7 +216,7 @@ I recommed to run komodod with -debug=net to easily discover wrong magic errors 
 ## What should happen in the test
 
 When you run the chain, webpack and webcoin-bridge, you might go to the test page url in browser (http://localhost:8080).<br>
-When you load it in a browser it should print the created cc faucet txhex content in the browser window. 
+It allows first to connect to a peer and then create cc faucet transactions. 
 
 
 ## Info about new and updated packages
