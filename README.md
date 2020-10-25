@@ -117,7 +117,7 @@ module.exports = {
   entry: "./ccfaucetpocbr.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "ccpfaucetpocbr-bundle.js",
+    filename: "ccfaucetpocbr-bundle.js",
   },
   mode: "development"
 };
