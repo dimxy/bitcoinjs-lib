@@ -33,7 +33,7 @@ npm install
 ```
 
 Setup network parameters for your komodo chain:<br>
-Open ts_src/networks.ts and make a new entry for your chain.<br>
+Open `ts_src/networks.ts` and make a new entry for your chain.<br>
 In fact you need to fix the yourchainname and magic params for your chain:
 ```
 export const yourchainname: Network = {
@@ -121,7 +121,7 @@ module.exports = {
     library: 'myLibrary'
   },
   mode: "development",
-  //to serve from any address:
+  //to serve from any external address (do not add this devServer config to serve only locally):
   devServer: {
     port: 8080,
     host: '0.0.0.0'
