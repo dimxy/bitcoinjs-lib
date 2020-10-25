@@ -120,7 +120,12 @@ module.exports = {
     filename: "ccfaucetpocbr-bundle.js",
     library: 'myLibrary'
   },
-  mode: "development"
+  mode: "development",
+  //to serve from any address:
+  devServer: {
+    port: 8080,
+    host: '0.0.0.0'
+  }
 };
 ```
 (Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
