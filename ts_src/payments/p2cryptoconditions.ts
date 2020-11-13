@@ -1,9 +1,12 @@
 import { bitcoin as BITCOIN_NETWORK } from '../networks';
 import * as bscript from '../script';
+//import * as bufferUtils from '../bufferutils';
+//const varuint = require('varuint-bitcoin');
+
 import { Payment, PaymentOpts/*, StackFunction*/ } from './index';
 //import * as lazy from './lazy';
 const typef = require('typeforce');
-//const OPS = bscript.OPS;
+const OPS = bscript.OPS;
 export const CCOPS = {
   OP_CRYPTOCONDITIONS: 0xCC
 };
@@ -65,25 +68,60 @@ export function p2cryptoconditions(a: Payment, opts?: PaymentOpts): Payment {
   return Object.assign(o, a);
 }
 
-export function isPayToCryptocondition(spk: Buffer) : boolean
+export function parseSpkCryptocondition(spk: Buffer) : Buffer
+{
+  //console.log('IsPayToCryptocondition spk=', spk.toString('hex'));
+  if (Buffer.isBuffer(spk) /*&& spk.length >= 46 && spk[spk.length-1] == 0xcc*/)  {
+    let chunks = bscript.decompile(spk);
+    if (chunks && chunks.length >= 2) {
+      if (Buffer.isBuffer(chunks[0]) && chunks[1] as number == CCOPS.OP_CRYPTOCONDITIONS) {
+        let condbin : Buffer = chunks[0] as Buffer;
+        return condbin;
+      }
+    }
+  }
+  return Buffer.from([]);
+}
+
+export function getSpkCryptocondition(spk: Buffer) : any
 {
 
   //let cryptoconditions = ccimp;
   if (cryptoconditions === undefined)
     throw new Error("cryptoconditions lib not available");
 
-  //console.log('IsPayToCryptocondition spk=', spk.toString('hex'));
-  if (Buffer.isBuffer(spk) && spk.length >= 46 && spk[spk.length-1] == 0xcc)  {
-    let condbin = spk.slice(1, spk.length-1);
-    //console.log('IsPayToCryptocondition checking buffer=', condbin.toString('hex'))
+  let condbin = parseSpkCryptocondition(spk);
+  if (Buffer.isBuffer(condbin) && condbin.length > 0)  {
     let cond = cryptoconditions.js_read_ccondition_binary(Uint8ClampedArray.from(condbin));
     if (cond !== undefined)
-      return true;
+      return cond;
   }
-  return false;
+  return undefined;
 }
 
-export function makeCCSpk(cond: Buffer) : Buffer
+export function isPayToCryptocondition(spk: Buffer) : boolean
+{
+  if (getSpkCryptocondition(spk) !== undefined)
+    return true;
+  else
+    return false;
+}
+
+export function ccConditionBinary(cond: Buffer) : Buffer
+{
+
+  //let cryptoconditions = ccimp;
+  if (cryptoconditions === undefined)
+    throw new Error("cryptoconditions lib not available");
+
+  let ccbin = cryptoconditions.js_cc_condition_binary(cond);
+  if (ccbin != null)
+    return Buffer.from(ccbin);
+
+  return Buffer.from([]);
+}
+
+export function makeCCSpk(cond: Buffer, opDropData: Buffer) : Buffer
 {
   if (cryptoconditions === undefined)
     throw new Error("cryptoconditions lib not available");
@@ -101,10 +139,35 @@ export function makeCCSpk(cond: Buffer) : Buffer
     //spk[0] = len;  // TODO: should be VARINT here
     //Buffer.from(ccbin.buffer).copy(spk, 1);
     //spk[1+len] = CCOPS.OP_CRYPTOCONDITIONS;
-    let spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS]);
+    let spk; 
+    if (opDropData === undefined)
+      spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS]);
+    else 
+      spk = bscript.compile([Buffer.from(ccbin), CCOPS.OP_CRYPTOCONDITIONS, opDropData, OPS.OP_DROP]);
     return spk;
   }
   return Buffer.from([]);
+}
+
+export function makeOpDropData(evalCode: number, m: number, n: number, vData: Buffer) : Buffer
+{
+  let version = 1;
+
+  let vParams = bscript.compile([version, evalCode, m , n]);
+  let opDropData = bscript.compile([vParams, vData]);
+  /*let params = Buffer.allocUnsafe(4);
+  let bufferWriter1 = new bufferUtils.BufferWriter(params);
+
+  bufferWriter1.writeUInt8(version);
+  bufferWriter1.writeUInt8(evalCode);
+  bufferWriter1.writeUInt8(m);
+  bufferWriter1.writeUInt8(n);
+
+  let opdrop = Buffer.allocUnsafe(1+4 + varuint.encodingLength(vData.length) + vData.length )
+  let bufferWriter2 = new bufferUtils.BufferWriter(opdrop);
+  bufferWriter2.writeSlice(params);
+  bufferWriter2.writeSlice(vData);*/
+  return opDropData;
 }
 
 export function makeCCScriptSig(cond: Buffer): Buffer

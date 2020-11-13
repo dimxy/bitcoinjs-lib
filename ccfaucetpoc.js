@@ -7,11 +7,16 @@
 const { Transaction } = require('./src/transaction');
 //const { Psbt, PsbtTransaction } = require('./src/psbt');
 const { Psbt } = require('./src/psbt');
+const ECPair = require('./src/ecpair');
 const p2cryptoconditions = require('./src/payments/p2cryptoconditions');
+
+const wrtc=require('wrtc')
+
 
 //require('./src/cctransaction')
 
 const kmdmessages = require('./net/kmdmessages');
+const ccutils = require('./cc/ccutils');
 
 //import * as cryptoconditions from "cryptoconditions/cryptoconditions.js"; // not used
 var ccimp;
@@ -21,6 +26,7 @@ else
   ccimp = require('cryptoconditions-js/pkg/cryptoconditions.js');  // in nodejs, use 'wasm-pack build -t nodejs'
 
 const networks = require('./src/networks');
+//const mynetwork = networks.rick; 
 const mynetwork = networks.dimxy15;
 const bufferutils = require("./src/bufferutils");
 const script = require("./src/script");
@@ -65,6 +71,7 @@ var webSeeds = [
 
 var staticPeers = [
   'localhost:14722'
+  //'rick.kmd.dev:25434'
 ]
 
 var params = {
@@ -73,12 +80,13 @@ var params = {
   dnsSeeds: dnsSeeds,
   webSeeds: webSeeds,
   staticPeers: staticPeers,  // dnsSeed works also
-  //connectWeb: true,
   protocolVersion: 170009,
   messages: kmdmessages.kmdMessages
 }
 
 var opts = {
+  //connectWeb: true,
+  //wrtc: wrtc,
   numPeers: 1
   //hardLimit: 2
 }
@@ -115,31 +123,13 @@ peers.on('getBlocks', (peer) => {
   console.log('got nspv result', peer.socket.remoteAddress)
 })*/
 
-function getUtxos(address, isCC)
+
+
+function createTxAndAddFaucetInputs(peers, globalpk, amount)
 {
   return new Promise((resolve, reject) => {
-    peers.nspvGetUtxos(address, isCC, {}, (err, res, peer) => {
-      //console.log('err=', err, 'res=', res);
-      if (!err)
-        resolve(res);
-      else
-        reject(err);
-    });
-  });
-}
 
-function createTxAndAddNormalInputs(mypk, amount)
-{
-  return new Promise((resolve, reject) => {
-    /*let request = `{
-      "method": "createtxwithnormalinputs",
-      "mypk": "${mypk}",
-      "params": [
-        "${amount}" 
-      ]
-    }`;*/
-
-    peers.nspvRemoteRpc("createtxwithnormalinputs", mypk, amount, {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("faucetaddccinputs", globalpk, amount, {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -149,28 +139,7 @@ function createTxAndAddNormalInputs(mypk, amount)
   });
 }
 
-function createTxAndAddFaucetInputs(mypk, amount)
-{
-  return new Promise((resolve, reject) => {
 
-    peers.nspvRemoteRpc("faucetaddccinputs", mypk, amount, {}, (err, res, peer) => {
-      //console.log('err=', err, 'res=', res);
-      if (!err) 
-        resolve(res);
-      else
-        reject(err);
-    });
-  });
-}
-
-function getNormalUtxos(address)
-{
-  return getUtxos(address, false);
-}
-function getCCUtxos(address)
-{
-  return getUtxos(address, true);
-}
 
 // gets txns only from mempool
 /*function getTransactions(txids)
@@ -221,7 +190,6 @@ if (!process.browser)
   // create connections to peers
   peers.connect(async () => {
   
-
     try {
       
       // test get blocks from peer (TODO: update for kmd block and transactions support) : 
@@ -229,30 +197,30 @@ if (!process.browser)
       // let blocks = peers.getBlocks(hashes, {});
       // console.log('blocks:', blocks);
 
-      // get normal utxos from an address:
-      let utxos = await getNormalUtxos(faucetcreateaddress);
-      console.log('utxos=', utxos);
+      // test get normal utxos from an address:
+      //let utxos = await ccutils.getNormalUtxos(peers, faucetcreateaddress);
+      //console.log('utxos=', utxos);
 
       // it should be at least 1 sec between the same nspv requests (here NSPV_UTXOS)
-      var t0 = new Date().getSeconds();
-      do {
-        var t1 = new Date().getSeconds();
-      } while(t1 == t0);
+      //var t0 = new Date().getSeconds();
+      //do {
+      //  var t1 = new Date().getSeconds();
+      //} while(t1 == t0);
 
       // get cc utxos:
-      let ccutxos = await getCCUtxos(faucetGlobalAddress);
-      console.log('cc utxos=', ccutxos); 
+      //let ccutxos = await ccutils.getCCUtxos(peers, faucetGlobalAddress);
+      //console.log('cc utxos=', ccutxos); 
 
       // make cc faucet create tx
-      // let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
-      // console.log('txhex=', txhex);
+      //let txhex = await ccfaucet_create(faucetcreatewif, faucetcreateaddress, FAUCETSIZE*20);
+      //console.log('txhex=', txhex);
 
       // make cc faucet get tx
-      // let txhex = await ccfaucet_get(faucetgetwif, faucetgetaddress);
-      // console.log('txhex=', txhex);
+      let txhex = await ccfaucet_get(faucetgetaddress);
+      console.log('txhex=', txhex);
 
       // make tx with normal inputs for the specified amount
-      // let txwnormals = await createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 10000);
+      // let txwnormals = await ccutils.createTxAddNormalInputs('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 10000);
       // console.log('txwnormals=', txwnormals);
     }
     catch(err) {
@@ -334,31 +302,12 @@ async function ccfaucet_create(_wif, _myaddress, _amount) {
 };
 
 exports.ccfaucet_get = ccfaucet_get;
-async function ccfaucet_get(_wif, _myaddress) {
-  let wif = _wif || faucetgetwif;
+async function ccfaucet_get(_myaddress) {
   let myaddress = _myaddress || faucetgetaddress;
-  let tx = await makeFaucetGetTx(wif, myaddress);
+  let tx = await makeFaucetGetTx(myaddress);
   //return this.broadcast(tx.toHex());
   return tx.toHex();
 };
-
-
-function addInputsFromPreviousTxns(psbt, tx, prevTxnsHex)
-{
-  let added = 0;
-  for(let i = 0; i < tx.ins.length; i ++) {
-    let prevTxHex = prevTxnsHex.find((txHex) => Transaction.fromHex(txHex).getHash().equals(tx.ins[i].hash));
-    if (prevTxHex !== undefined) {
-      let inputData = Object.assign({}, tx.ins[i]);
-      inputData.nonWitnessUtxo = Buffer.from(prevTxHex, 'hex');
-
-      let prevTx = Transaction.fromBuffer(inputData.nonWitnessUtxo);
-      added += prevTx.outs[tx.ins[i].index].value;
-      psbt.addInput(inputData);
-    }
-  }
-  return added;
-}
 
 async function makeFaucetCreateTx(wif, myaddress, amount) 
 {
@@ -375,8 +324,8 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   if (added < amount)
     throw new Error('could not find normal inputs');*/
     
-  let mypk = ecpair.fromWIF(faucetcreatewif, mynetwork).publicKey;
-  let txwutxos = await createTxAndAddNormalInputs(mypk, amount + txfee);
+  let { myprivKey, mypk } = ecpair.fromWIF(wif, mynetwork);
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypk, amount + txfee);
 
   let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
   let psbt = new Psbt({network: mynetwork});
@@ -385,7 +334,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
   psbt.setVersion(tx.version);
   psbt.__CACHE.__TX.versionGroupId = tx.versionGroupId;
 
-  let added = addInputsFromPreviousTxns(psbt, tx, txwutxos.previousTxns);
+  let added = ccutils.addInputsFromPreviousTxns(psbt, tx, txwutxos.previousTxns);
   if (added < amount + txfee)
     throw new Error("insufficient normal inputs (" + added + ")")
 
@@ -394,7 +343,7 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
     threshold:	2,
     subfulfillments:	[{
           type:	"eval-sha-256",   
-          code:	 hex2Base64('e4')     
+          code:	ccutils.hex2Base64('e4')     
       }, {            
           type:	"threshold-sha-256",
           threshold:	1,
@@ -417,11 +366,11 @@ async function makeFaucetCreateTx(wif, myaddress, amount)
 
   //console.log('tx..:', txbuilder.buildIncomplete().toHex());
 
-  finalizeCCtx(wif, psbt, addedUnspents);
+  ccutils.finalizeCCtx(myprivKey, psbt);
   return psbt.extractTransaction();
 }
 
-async function makeFaucetGetTx(wif, myaddress) 
+async function makeFaucetGetTx(myaddress) 
 {
   // init lib cryptoconditions
   //cryptoconditions = await ccimp;  // always ensure cc is loaded
@@ -434,8 +383,8 @@ async function makeFaucetGetTx(wif, myaddress)
   const amount = FAUCETSIZE;
 
   //let added = await addCCInputs(txbuilder, faucetGlobalAddress, amount+txfee, addedUnspents);
-  let mypk = ecpair.fromWIF(faucetcreatewif, mynetwork).publicKey;
-  let txwutxos = await createTxAndAddFaucetInputs(mypk, amount);
+  //let mypk = ecpair.fromWIF(faucetcreatewif, mynetwork).publicKey;
+  let txwutxos = await createTxAndAddFaucetInputs(peers, faucetGlobalPk, amount);
 
   let basetx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
 
@@ -449,7 +398,7 @@ async function makeFaucetGetTx(wif, myaddress)
     threshold:	2,
     subfulfillments:	[{
         type:	"eval-sha-256",   
-        code:	 hex2Base64('e4')     
+        code:	 ccutils.hex2Base64('e4')     
     }, {            
         type:	"threshold-sha-256",
         threshold:	1,
@@ -495,7 +444,7 @@ async function makeFaucetGetTx(wif, myaddress)
       psbt.setVersion(basetx.version);
       psbt.__CACHE.__TX.versionGroupId = basetx.versionGroupId;
     
-      let added = addInputsFromPreviousTxns(psbt, basetx, txwutxos.previousTxns);
+      let added = ccutils.addInputsFromPreviousTxns(psbt, basetx, txwutxos.previousTxns);
       if (added < amount)
         throw new Error('could not find cc faucet inputs');
 
@@ -523,7 +472,7 @@ async function makeFaucetGetTx(wif, myaddress)
       let opreturn = script.compile([ script.OPS.OP_RETURN, Buffer.concat([ Buffer.from(num2Uint32(adj1 >>> 0)), Buffer.from(num2Uint32(adj2 >>> 0)) ]) ]);
       psbt.addOutput({ script: opreturn, value: 0 });
      
-      finalizeCCtx(wif, psbt, [], cond);
+      ccutils.finalizeCCtx(ECPair.fromPrivkey(faucetGlobalPrivkey, { compressed: true, network: mynetwork }), psbt, [cond]);
       let tx = psbt.extractTransaction();
       //console.log('tx===', tx.toHex())
       let txid = tx.getId();
@@ -544,7 +493,7 @@ async function makeFaucetGetTx(wif, myaddress)
 /*async function addNormalInputs(txbuilder, address, amount, addedUnspents) 
 {
   // const unspents = await regtestUtils.unspents(address);  // call via JSON RPC
-  const unspents = await getNormalUtxos(address);     // call via NSPV
+  const unspents = await ccutils.getNormalUtxos(peers, address);     // call via NSPV
   if (!unspents)
     return 0;
   //const txns = await regtestUtils.getaddresstxns(address);
@@ -577,7 +526,7 @@ async function makeFaucetGetTx(wif, myaddress)
 /*async function addCCInputs(txbuilder, address, amount, addedUnspents) 
 {
   //const unspents = await regtestUtils.ccunspents(address);
-  const unspents = await getCCUtxos(address);
+  const unspents = await ccutils.getCCUtxos(peers, address);
   if (!unspents)
     return 0;
 
@@ -610,116 +559,6 @@ async function makeFaucetGetTx(wif, myaddress)
 
 
 
-function hex2Base64(hexString)
-{
-  return Buffer.from(hexString, 'hex').toString('base64');
-}
 
-function finalizeCCtx(wif, psbt, addedUnspents, cccond)
-{
-  //let tx = txb.buildIncomplete();
-  //for (let index = 0; index < tx.ins.length; index ++)
-  for (let index = 0; index < psbt.data.inputs.length; index ++)
-  {
-    /*let unspent = addedUnspents.find((u) => {
-      //let txid = bufferutils.reverseBuffer(Buffer.from(u.txId, 'hex'));
-      let txid = u.txId;
-      //console.log('hash=', tx.ins[index].hash.toString('hex'), ' txId=', txid.toString('hex'));
-      return txb.__TX.ins[index].hash.toString('hex') === txid.toString('hex');
-    });
-    if (unspent === undefined) 
-      throw new Error('internal err: could not find tx unspent in addedUnspents');
-    
-    console.log('unspent.script=', Buffer.from(unspent.script).toString('hex'));*/
-    let keyPairIn = ecpair.fromWIF(wif, mynetwork);
-    let prevOut = getPsbtPrevOut(psbt, index);
 
-    if (!p2cryptoconditions.isPayToCryptocondition(prevOut.script))  {
-      psbt.signInput(
-        index, keyPairIn
-      /*{
-        //prevOutScriptType: classify.output(Buffer.from(unspent.script)),
-        prevOutScriptType: getOutScriptTypeFromOutType(txb.__INPUTS[index].prevOutType),  // TODO: replace accessing seemingly an internal var
-        vin: index,
-        keyPair: keyPairIn,
-        value: unspent.value
-      }*/);
-      psbt.finalizeInput(index);
-    }
-    else {
-      let signatureHash = psbt.__CACHE.__TX.hashForKomodo(
-        index,
-        prevOut.script,  // makeCCSpk(cccond),
-        prevOut.value,   // unspent.value,
-        Transaction.SIGHASH_ALL,
-      );    
-
-      let signedCond = p2cryptoconditions.cryptoconditions.js_sign_secp256k1(cccond, /*keyPairIn.privateKey*/faucetGlobalPrivkey, signatureHash);
-      let ccScriptSig = p2cryptoconditions.makeCCScriptSig(signedCond);
-      //txb.__INPUTS[index].ccScriptSig = ccScriptSig;
-      
-      psbt.finalizeInput(index, (index, psbtInput) => {
-        //if (psbtInput.finalScriptSig)
-        //  psbtInput.finalScriptSig = undefined;  // 'un-finalize' psbt output. No need of this as we now recreating all inputs/outputs for each faucet get txpow try
-        return { finalScriptSig: ccScriptSig };  // looks like a hack but to avoid extra psbt after-signing checks 
-      });
-      //console.log('signed cccond=', signedCond);
-    }
-  }
-}
-
-/*
-function getOutScriptTypeFromOutType(outType)
-{
-  switch(outType) {
-    case classify.types.P2PK:
-      return 'p2pk';
-    case classify.types.P2PKH:
-      return 'p2pkh';
-    default:
-      return undefined;
-  }
-}*/
-
-/*function isPayToCryptocondition(spk)
-{
-  //let ccimp = await cryptoconditions;
-  if (cryptoconditions === undefined)
-    return false;
-
-  console.log('IsPayToCryptocondition spk=', spk.toString('hex'));
-  if (Buffer.isBuffer(spk) && spk.length >= 46 && spk[spk.length-1] == 0xcc)  {
-    let condbin = spk.slice(1, spk.length-1);
-    console.log('IsPayToCryptocondition checking buffer=', condbin.toString('hex'))
-    let cond = cryptoconditions.js_read_ccondition_binary(condbin);
-    if (cond !== undefined)
-      return true;
-  }
-  return false;
-}*/
-
-function getPsbtPrevOut(psbt, index)
-{
-  let input = psbt.data.inputs[index];
-  if (input.nonWitnessUtxo) { 
-    const unsignedTx = psbt.__CACHE.__TX;
-    const c = psbt.__CACHE.__NON_WITNESS_UTXO_TX_CACHE;
-    const nonWitnessUtxoTx = c[index];
-
-    const prevoutHash = unsignedTx.ins[index].hash;
-    const utxoHash = nonWitnessUtxoTx.getHash();
-
-    // If a non-witness UTXO is provided, its hash must match the hash specified in the prevout
-    if (!prevoutHash.equals(utxoHash)) {
-      throw new Error(
-        `Non-witness UTXO hash for input #${index} doesn't match the hash specified in the prevout`,
-      );
-    }
-
-    const prevoutIndex = unsignedTx.ins[index].index;
-    const prevout = nonWitnessUtxoTx.outs[prevoutIndex];
-    return prevout;
-  }
-  return { script: Buffer.from([]), value: 0 };
-}
 

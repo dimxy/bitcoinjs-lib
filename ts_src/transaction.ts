@@ -256,9 +256,10 @@ export class Transaction {
 
   byteLength(_ALLOW_WITNESS: boolean = true): number {
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
+    const versionStripped = (this.version >>> 0) & (~(1 << 31) >>> 0);
 
     return (
-      (hasWitnesses ? 10 : 8) +
+      (hasWitnesses ? 10 : 8) + // 8 is version + locktime
       varuint.encodingLength(this.ins.length) +
       varuint.encodingLength(this.outs.length) +
       this.ins.reduce((sum, input) => {
@@ -271,8 +272,11 @@ export class Transaction {
         ? this.ins.reduce((sum, input) => {
             return sum + vectorSize(input.witness);
           }, 0)
-        : 0)
-        + 4 + 15);
+        : 0) +
+      (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING ? 
+          (4 + 3 + 8 + 4) : // versionGroupId(4)  + 3 * varint(1) + valueBalance(8) + expireHeight(4)
+          0)
+    ); 
   }
 
   clone(): Transaction {
@@ -492,6 +496,13 @@ export class Transaction {
       arguments,
     );
 
+    if (this.version == 1)
+      return this.hashForSignature(inIndex, prevOutScript, hashType);
+    
+    const versionStripped = (this.version >>> 0) & (~(1 << 31) >>> 0);
+    if (versionStripped < KMD_TX_VERSION.OVERWINTER || versionStripped > KMD_TX_VERSION.SAPLING)
+      throw new Error('hashForKomodo: unsupported version type: ' + this.version);
+
     let tbuffer: Buffer = Buffer.from([]);
     let bufferWriter: BufferWriter;
 
@@ -501,7 +512,6 @@ export class Transaction {
     let sigHash = Buffer.allocUnsafe(32);
 
     let emptyHash = Buffer.alloc(32); // init with 0
-
 
     tbuffer = Buffer.alloc/*Unsafe*/(36 * this.ins.length);
     bufferWriter = new BufferWriter(tbuffer, 0);
@@ -547,10 +557,16 @@ export class Transaction {
     bufferWriter = new BufferWriter(tbuffer, 0);
 
     const input = this.ins[inIndex];
+
+    if (versionStripped < KMD_TX_VERSION.OVERWINTER || versionStripped > KMD_TX_VERSION.SAPLING)
+      throw new Error('hashForKomodo: unsupported version type');
+
     bufferWriter.writeUInt32(this.version);
-    bufferWriter.writeUInt32(this.versionGroupId);
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
+      bufferWriter.writeUInt32(this.versionGroupId);
     bufferWriter.writeSlice(hashPrevouts);
-    bufferWriter.writeSlice(hashSequence);
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
+      bufferWriter.writeSlice(hashSequence);
     //bufferWriter.writeSlice(input.hash);
     //bufferWriter.writeUInt32(input.index);
     //bufferWriter.writeVarSlice(prevOutScript);
@@ -559,14 +575,19 @@ export class Transaction {
     bufferWriter.writeSlice(hashOutputs);
     //console.log('hashOutputs', tbuffer.toString('hex'))
 
-
-    bufferWriter.writeSlice(emptyHash);   // JoinSplits
-    bufferWriter.writeSlice(emptyHash);   // Spend descriptions
-    bufferWriter.writeSlice(emptyHash);   // Output descriptions
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
+    {
+      bufferWriter.writeSlice(emptyHash);   // JoinSplits
+      bufferWriter.writeSlice(emptyHash);   // Spend descriptions
+      bufferWriter.writeSlice(emptyHash);   // Output descriptions
+    }
     //console.log('3 empty hash', tbuffer.toString('hex'))
     bufferWriter.writeUInt32(this.locktime);
-    bufferWriter.writeUInt32(this.nExpiryHeight);  // ExpiryHeight
-    bufferWriter.writeUInt64(0); // value balance
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
+    {
+      bufferWriter.writeUInt32(this.nExpiryHeight);  // ExpiryHeight
+      bufferWriter.writeUInt64(0); // value balance
+    }
     bufferWriter.writeUInt32(hashType);
     //console.log('locktime', tbuffer.toString('hex'))
 
@@ -630,7 +651,9 @@ export class Transaction {
     const bufferWriter = new BufferWriter(buffer, initialOffset || 0);
 
     bufferWriter.writeUInt32(this.version);  // komodo header incl overwinter flag
-    bufferWriter.writeUInt32(this.versionGroupId);  // komodo version group id
+    const versionStripped = (this.version >>> 0) & (~(1 << 31) >>> 0);
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING)
+      bufferWriter.writeUInt32(this.versionGroupId);  // komodo version group id
 
     const hasWitnesses = _ALLOW_WITNESS && this.hasWitnesses();
 
@@ -667,16 +690,23 @@ export class Transaction {
 
     bufferWriter.writeUInt32(this.locktime);
 
-    bufferWriter.writeUInt32(this.nExpiryHeight);   // expiry height
-    bufferWriter.writeUInt64(0);   // value balance
+    if (versionStripped >= KMD_TX_VERSION.OVERWINTER && versionStripped <= KMD_TX_VERSION.SAPLING) 
+    {
+      bufferWriter.writeUInt32(this.nExpiryHeight);   // expiry height
+      bufferWriter.writeUInt64(0);   // value balance
 
-    bufferWriter.writeVarInt(0);   // empty vShieldedSpend
-    bufferWriter.writeVarInt(0);   // empty vShieldedOutput
-    bufferWriter.writeVarInt(0);   // empty vjoinsplit
+      bufferWriter.writeVarInt(0);   // empty vShieldedSpend
+      bufferWriter.writeVarInt(0);   // empty vShieldedOutput
+      bufferWriter.writeVarInt(0);   // empty vjoinsplit
+    }
 
     // avoid slicing unless necessary
     if (initialOffset !== undefined)
       return buffer.slice(initialOffset, bufferWriter.offset);
+    //if (bufferWriter.offset < buffer.length)
+    //  return buffer.slice(0, bufferWriter.offset); // alloced too much
+    if (bufferWriter.offset != buffer.length && bufferWriter.offset != buffer.length - 4)
+      throw new Error('__toBuffer: invalid offset!')
     return buffer;
   }
 }
