@@ -33,7 +33,7 @@ npm install
 ```
 
 Setup network parameters for your komodo chain:<br>
-Open ts_src/networks.ts and make a new entry for your chain.<br>
+Open `ts_src/networks.ts` and make a new entry for your chain.<br>
 In fact you need to fix the yourchainname and magic params for your chain:
 ```
 export const yourchainname: Network = {
@@ -114,12 +114,18 @@ webpack.config.js:
 ```
 const path = require('path');
 module.exports = {
-  entry: "./ccpfaucetpocbr.js",
+  entry: "./ccfaucetpocbr.js",
   output: {
     path: path.resolve(__dirname, "dist"),
-    filename: "ccpfaucetpocbr-bundle.js",
+    filename: "ccfaucetpocbr-bundle.js",
+    library: 'myLibrary'
   },
-  mode: "development"
+  mode: "development",
+  //to serve from any external address (do not add this devServer config to serve only locally):
+  devServer: {
+    port: 8080,
+    host: '0.0.0.0'
+  }
 };
 ```
 (Both those package.json and webpack.config.js files may be found in webpack-test subdir of bitcoinjs-lib-kmd dir)
@@ -210,7 +216,7 @@ I recommed to run komodod with -debug=net to easily discover wrong magic errors 
 ## What should happen in the test
 
 When you run the chain, webpack and webcoin-bridge, you might go to the test page url in browser (http://localhost:8080).<br>
-When you load it in a browser it should print the created cc faucet txhex content in the browser window. 
+It allows first to connect to a peer and then create cc faucet transactions. 
 
 
 ## Info about new and updated packages
