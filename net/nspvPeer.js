@@ -6,6 +6,7 @@ const debug = Debug('bitcoin-net:peer')
 debug.rx = Debug('bitcoin-net:messages:rx')
 debug.tx = Debug('bitcoin-net:messages:tx')
 
+const bufferutils = require("../src/bufferutils");
 const Peer = require('bitcoin-net').Peer
 const { NSPVREQ, NSPVRESP, nspvReq, nspvResp } = require('./kmdtypes');
 
@@ -18,6 +19,7 @@ Peer.prototype._registerListeners = function() {
   })
 }
 
+// nspv get utxos
 Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
@@ -52,6 +54,7 @@ Peer.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
   }, opts.timeout)
 }
 
+// call nspv remote rpc
 Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   if (typeof opts === 'function') {
     cb = opts
@@ -70,7 +73,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     params = JSON.stringify(_params);
   else
     params = '["' + _params.toString() + '"]';
-  let request = `{
+  let jsonRequest = `{
     "method": "${rpcMethod}",
     "mypk": "${mypk}",
     "params": ${params}
@@ -80,7 +83,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   var onNspvResp = (resp) => {
     if (timeout) clearTimeout(timeout)
     if (!resp || !resp.jsonSer) {
-      cb(new Error("could not parse nspv response"));
+      cb(new Error("could not parse nspv remote rpc response"));
       return;
     }
 
@@ -104,7 +107,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   }
   this.once(`nSPV:${NSPVRESP.NSPV_REMOTERPCRESP}`, onNspvResp)
 
-  let jsonSer = Buffer.from(request);
+  let jsonSer = Buffer.from(jsonRequest);
   let nspvRemoteRpcReq = {
     reqCode: NSPVREQ.NSPV_REMOTERPC,
     length: jsonSer.length,
@@ -122,5 +125,53 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
   }, opts.timeout)
 }
 
+// nspv broadcast
+Peer.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
+  if (typeof opts === 'function') {
+    cb = opts
+    opts = {}
+  }
+  if (opts.timeout == null) opts.timeout = this._getTimeout()
+
+  if (typeof txidhex !== 'string' || txidhex.length != 64) {
+    cb(new Error('txid hex should be a string of 64'));
+    return;
+  }
+
+  if (typeof txhex !== 'string') {
+    cb(new Error('txhex not a string'));
+    return;
+  }
+
+  var timeout
+  var onNspvResp = (resp) => {
+    if (timeout) clearTimeout(timeout)
+    if (!resp || !resp.txid || !resp.retcode) {
+      cb(new Error("could not parse nspv broadcast response"));
+      return;
+    }
+    let reversed = Buffer.allocUnsafe(resp.txid.length);
+    resp.txid.copy(reversed);
+    bufferutils.reverseBuffer(reversed);
+    cb(null, { retcode: resp.retcode, txid: reversed.toString('hex') }); 
+  }
+  this.once(`nSPV:${NSPVRESP.NSPV_BROADCASTRESP}`, onNspvResp)
+
+  let nspvBroadcastReq = {
+    reqCode: NSPVREQ.NSPV_BROADCAST,
+    txid: Buffer.from(txidhex, 'hex'),
+    txdata: Buffer.from(txhex, 'hex')  
+  }
+  let buf = nspvReq.encode(nspvBroadcastReq)
+  this.send('getnSPV', buf)
+
+  if (!opts.timeout) return
+  timeout = setTimeout(() => {
+    debug(`getnSPV NSPV_BROADCAST timed out: ${opts.timeout} ms`)
+    var error = new Error('Request timed out')
+    error.timeout = true
+    cb(error)
+  }, opts.timeout)
+}
 
 

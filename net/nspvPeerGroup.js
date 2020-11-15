@@ -15,6 +15,8 @@ class NspvPeerGroup extends PeerGroup {
 
     this.on('nSPV', (buf) => {
       let resp = nspvResp.decode(buf);
+      if (resp === undefined)
+        throw new Error('unknown nSPV response received');
       this.emit(`nSPV:${resp.respCode}`, resp)
     })
   }
@@ -26,6 +28,10 @@ PeerGroup.prototype.nspvGetUtxos = function(address, isCC, opts, cb) {
 
 PeerGroup.prototype.nspvRemoteRpc = function(rpcMethod, mypk, params, opts, cb) {
   this._request('nspvRemoteRpc', rpcMethod, mypk, params, opts, cb)
+}
+
+PeerGroup.prototype.nspvBroadcast = function(txidhex, txhex, opts, cb) {
+  this._request('nspvBroadcast', txidhex, txhex, opts, cb)
 }
 
 module.exports = old(NspvPeerGroup)

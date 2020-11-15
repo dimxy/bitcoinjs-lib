@@ -4,6 +4,8 @@ const struct = require('varstruct')
 const varint = require('varuint-bitcoin')
 const ip = require('ip')
 
+const bufferutils = require("../src/bufferutils");
+
 exports.buffer8 = struct.Buffer(8)
 exports.buffer32 = struct.Buffer(32)
 exports.varBuffer = struct.VarBuffer(varint)
@@ -232,12 +234,14 @@ exports.kmdheader = struct([
 ])
 
 const NSPVREQ = {
-  NSPV_UTXOS: 0x02,
+  NSPV_UTXOS: 0x02,  // not used, createtxwithnormalinputs rpc is used instead
+  NSPV_BROADCAST: 0x0c,
   NSPV_REMOTERPC: 0x14+1
 };
 
 const NSPVRESP = {
   NSPV_UTXOSRESP: 0x03,
+  NSPV_BROADCASTRESP: 0x0d,
   NSPV_REMOTERPCRESP: 0x15+1
 };
 
@@ -278,17 +282,55 @@ let utxoresp = struct([
 
 ]);
 
-let remoterpc = struct([
+// custom parsers for broadcast as this type is impossible to be mapped to standard bitcoin types like varbuffer
+let nspvBroadcastType = (function(){
+  function encode(value, buffer, offset) {
+    let bufferWriter = new bufferutils.BufferWriter(buffer, offset);
+    bufferWriter.writeUInt8(value.reqCode);
+    bufferWriter.writeSlice(value.txid);
+    bufferWriter.writeUInt32(value.txdata.length);
+    bufferWriter.writeSlice(value.txdata);
+    encode.bytes = bufferWriter.offset;
+  }
+  function encodingLength(value) {
+    return 1 + 32 + 4 + value.txdata.length; // sizeof(uint8_t) + txid256 + sizeof(int32) + txdata.length
+  }
+  function decode(buffer, offset, end) {
+    return { };  // not used
+  }
+  return { encode, decode, encodingLength }
+})();
+let nspvBroadcastRespType = (function(){
+  function encode(value, buffer, offset) {
+    // not used
+  }
+  function encodingLength(value) {
+    return 1 + 32 + 4; // sizeof(uint8_t) + sizeof(txid) + sizeof(int32 retcode)
+  }
+  function decode(buffer, offset, end) {
+    let slicedBuffer = buffer.slice(offset, end);
+    let bufferReader = new bufferutils.BufferReader(slicedBuffer);
+    let respCode = bufferReader.readUInt8();
+    let txid = bufferReader.readSlice(32);
+    let retcode = bufferReader.readInt32();
+    return { respCode: respCode, txid: txid, retcode: retcode };
+  }
+  return { encode, decode, encodingLength }
+})();
+
+
+let nspvRemoteRpc = struct([
   { name: 'reqCode', type: struct.UInt8 },
   { name: 'jsonSer', type: exports.varBuffer }
 ]);
 
-let remoterpcresp = struct([
+let nspvRemoteRpcResp = struct([
   { name: 'respCode', type: struct.UInt8 },
   { name: 'method', type: methodtype  },  
   { name: 'jsonSer', type: exports.varBuffer }
 ]);
 
+// encode nspv requests
 exports.nspvReq = (function () {
   function encode (value, buffer = Buffer.alloc(encodingLength(value)), offset = 0) {
     value = Object.assign({}, value)
@@ -309,8 +351,11 @@ exports.nspvReq = (function () {
       case NSPVREQ.NSPV_UTXOS:
         type = utxoreq;
         break;
+      case NSPVREQ.NSPV_BROADCAST:
+        type = nspvBroadcastType;
+        break;
       case NSPVREQ.NSPV_REMOTERPC:
-        type = remoterpc;
+        type = nspvRemoteRpc;
         break;
       default:
         return;
@@ -323,7 +368,6 @@ exports.nspvReq = (function () {
     let type = getEncodingType(reqCode);
     if (type === undefined)
       return;    
-
     let req = type.decode(buffer, offset, end)
     decode.bytes = type.decode.bytes
     return req
@@ -339,6 +383,7 @@ exports.nspvReq = (function () {
   return { encode, decode, encodingLength }
 })()
 
+// decode nspv responses
 exports.nspvResp = (function () {
   function encode (value, buffer = Buffer.alloc(encodingLength(value)), offset = 0) {
     value = Object.assign({}, value)
@@ -359,8 +404,11 @@ exports.nspvResp = (function () {
       case NSPVRESP.NSPV_UTXOSRESP:
         type = utxoresp;
         break;
+      case NSPVRESP.NSPV_BROADCASTRESP:
+        type = nspvBroadcastRespType;
+        break;
       case NSPVRESP.NSPV_REMOTERPCRESP:
-        type = remoterpcresp;
+        type = nspvRemoteRpcResp;
         break;
       default:
         return;

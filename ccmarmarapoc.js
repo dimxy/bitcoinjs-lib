@@ -35,10 +35,12 @@ const marmaraGlobalPkHex = "03afc5be570d0ff419425cfcc580cc762ab82baad88c148f5b02
 const marmaraGlobalPrivkey = Buffer.from([ 0x7c, 0x0b, 0x54, 0x9b, 0x65, 0xd4, 0x89, 0x57, 0xdf, 0x05, 0xfe, 0xa2, 0x62, 0x41, 0xa9, 0x09, 0x0f, 0x2a, 0x6b, 0x11, 0x2c, 0xbe, 0xbd, 0x06, 0x31, 0x8d, 0xc0, 0xb9, 0x96, 0x76, 0x3f, 0x24 ]);
 const marmaraGlobalAddress = "RGLSRDnUqTB43bYtRtNVgmwSSd1sun2te8";
 
-const issuerwif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';
+const issuerwif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';  // 035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db
 const issuesCCaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
-const endorserwif = 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-const endorserCCaddress = 'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
+const endorserwif = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu'; 
+// 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
+const endorserCCaddress = 'RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef'; // 034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc
+//'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
 const holderwif = "";
 
 
@@ -81,8 +83,8 @@ require('./net/nspvPeer')
 
 var peers;
 
-let mypair = ecpair.fromWIF('UwZJc6ffWPc7XzxjvYEaqWsXoCcGiwyqNdnGZSbcCwRNEdzcAzNH', mynetwork);
-      console.log('mypair.priv', mypair.privateKey.toString('hex'));
+//let mypair = ecpair.fromWIF('UwZJc6ffWPc7XzxjvYEaqWsXoCcGiwyqNdnGZSbcCwRNEdzcAzNH', mynetwork);
+//      console.log('mypair.priv', mypair.privateKey.toString('hex'));
 
 if (!process.browser) 
 {
@@ -119,6 +121,45 @@ function marmaraAddActivatedInputs(peers, _mypk, _pk, _amount)
   });
 }
 
+function marmaraInfo(peers, _mypk)
+{
+  return new Promise((resolve, reject) => {
+
+    let mypk = Buffer.isBuffer(_mypk) ? _mypk.toString('hex') : _mypk;
+
+    peers.nspvRemoteRpc("marmarainfo", mypk, ['0', '0', '0', '0', mypk], {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+
+function broadcast(peers, txidhex, txhex)
+{
+  return new Promise((resolve, reject) => {
+
+    peers.nspvBroadcast(txidhex, txhex, {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+
+async function broadcastTxhex(txhex)
+{
+  let ret = await broadcast(peers, "0000000000000000000000000000000000000000000000000000000000000000", txhex);
+  return ret;
+}
+
+exports.broadcastTxhex = broadcastTxhex;
 
 function Connect()
 {
@@ -149,14 +190,21 @@ if (!process.browser)
       //let lockret = await marmaraLock(issuerwif, 11100000);
       //console.log('lockret.txhex=', lockret.txhex, 'lockret.txid=', lockret.txid);
     
-      //let receiveret = await marmaraReceive(endorserwif);
+      //let receiveret = await marmaraReceive(endorserwif, '035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 0.1, 100);
       //console.log('receiveret.txhex=', receiveret.txhex, 'receiveret.txid=', receiveret.txid);
 
-      let issueret = await marmaraIssue(issuerwif, bufferutils.reverseBuffer(Buffer.from('8285a8b39fb3d86cd7d8190a6cd91abb310b84f3256c582b2fa487e6ef391bc8', 'hex')));
-      console.log('issueret.txhex=', issueret.txhex, 'issueret.txid=', issueret.txid);
+      //let issueret = await marmaraIssue(issuerwif, '8285a8b39fb3d86cd7d8190a6cd91abb310b84f3256c582b2fa487e6ef391bc8', ecpair.fromWIF(endorserwif, mynetwork).publicKey.toString('hex'));
+      //let issueret = await marmaraIssue(issuerwif, '316f7331d23e30d88a983d5a5b6b090c946a91a820203d663876e5ce3e13c78f', '035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db');
+      //console.log('issueret.txhex=', issueret.txhex, 'issueret.txid=', issueret.txid);
 
       //let { transfertxhex, transfertxid } = await marmaraTransfer(issuetxid, faucetgetaddress);
       //console.log('transfertxhex=', transfertxhex, 'transfertxid=', transfertxid);
+
+      //let broadcastret = await broadcast(peers, "0000000000000000000000000000000000000000000000000000000000000000", "0400008085202f8901b9d272e8ff0fed25735c1a7023acfbe7d788dec168b03de95bdb8155406c644a00ca9a3b0201e2ffffffff0280c3c901000000001976a914acc878cb6f4f9f57d1741c8258589ffbb5765c5488ac0000000000000000f16a4ceee21195f2ae1bcdeb74c36a31b7f07943c1731cc25504032a8f79d6b1eca0e5f84d20ce8ce618000400008085202f890105dd0b7151e02a21213ab30c1cdffc4fee57cb6074b1dadfeb3520ae1914da990100000048473044022036ff535d9420f01d56cd9276a718932509e0f9948bd231ac717cc55899d495770220521af8d7f8e96e3a286ae0ac7fb213fe995d509b26c5b87e0c6f5e1e3ade03c901ffffffff0180c3c90100000000306a2ee28efefefe7f065055424b4559cadcea46b009b3522a043cc64e1e0fb7583926f8f773a81143af5513d272dfc100000000003f010000000000000000000000000000000000000000000000000000000000000000");
+      //console.log("broadcastret=", broadcastret)
+
+      let marmarainfores = await marmaraInfo0000('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db')
+      console.log('marmarainfores=', JSON.stringify(marmarainfores,null,'\t'));
 
     }
     catch(err) {
@@ -167,25 +215,45 @@ if (!process.browser)
 
 exports.marmaraLock = marmaraLock;
 async function marmaraLock(_wif, _amount) {
-  let wif = _wif || issuerwif;
-  let amount  = _amount || 22200000;
+  let wif = _wif;
+  if (typeof _amount !== 'number')
+    throw new Error('invalid amount');
+  let amount = _amount * 10e8;
   return await makeMarmaraLockTx(wif, amount);
 }
 
 exports.marmaraReceive = marmaraReceive;
 async function marmaraReceive(_wif, _senderpk, _amount, _matures) {
   let wif = _wif || issuerwif;
-  let senderpk = _senderpk || ecpair.fromWIF(issuerwif, mynetwork).publicKey;
-  let amount  = _amount || 22200000;
+
+  if (typeof _senderpk !== 'string' || _senderpk.length != 66)
+    throw new Error('invalid public key');
+  let senderpk = Buffer.from(_senderpk, 'hex');//  ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+
+  if (typeof _amount !== 'number')
+    throw new Error('invalid amount');
+  let amount = _amount * 10e8;
+
   let currency = 'MARMARA';
-  let matures = _matures || 50;
+
+  if (typeof _matures !== 'number' || _matures <= 0)
+    throw new Error('invalid matures');
+  let matures = _matures;
+
   return await makeMarmaraReceiveTx(wif, senderpk, amount, currency, matures, undefined);
 }
 
 exports.marmaraIssue = marmaraIssue;
-async function marmaraIssue(_wif, receivetxid, _destpk) {
+async function marmaraIssue(_wif, _receivetxid, _destpk) {
   let wif = _wif || issuerwif;
-  let destpk = _destpk || ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+  if (typeof _receivetxid !== 'string' || _receivetxid.length != 64)
+    throw new Error('invalid txid');
+  let receivetxid = Buffer.from(_receivetxid, 'hex');
+  bufferutils.reverseBuffer(receivetxid);
+  if (typeof _destpk !== 'string' || _destpk.length != 66)
+    throw new Error('invalid public key');
+  let destpk = Buffer.from(_destpk, 'hex'); // ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+
   return await makeMarmaraIssueTx(wif, receivetxid, destpk);
 }
 
@@ -194,7 +262,27 @@ async function marmaraTransfer(_wif, _destpk, issuetxid) {
   let wif = _wif || endorserwif;
   let destpk = _destpk || ecpair.fromWIF(eholderwif, mynetwork).publicKey;
   return await makeMarmaraTransferTx(wif, issuetxid, destpk);
-  //return this.broadcast(tx.toHex());
+}
+
+exports.marmaraIssue = marmaraIssue;
+async function marmaraIssue(_wif, _receivetxid, _destpk) {
+  let wif = _wif || issuerwif;
+  if (typeof _receivetxid !== 'string' || _receivetxid.length != 64)
+    throw new Error('invalid txid');
+  let receivetxid = Buffer.from(_receivetxid, 'hex');
+  bufferutils.reverseBuffer(receivetxid);
+  if (typeof _destpk !== 'string' || _destpk.length != 66)
+    throw new Error('invalid public key');
+  let destpk = Buffer.from(_destpk, 'hex'); // ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+
+  return await makeMarmaraIssueTx(wif, receivetxid, destpk);
+}
+
+exports.marmaraInfo0000 = marmaraInfo0000;
+async function marmaraInfo0000(pk) {
+  if (typeof pk !== 'string' || pk.length != 66)
+    throw new Error('invalid public key');
+  return await marmaraInfo(peers, pk);
 }
 
 function marmaraEncodeCoinbaseVData(funcId, destpk, ht)
