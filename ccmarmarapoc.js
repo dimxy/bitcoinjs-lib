@@ -51,12 +51,12 @@ var dnsSeeds = [
 //  "localhost"
 ]
 var webSeeds = [
-  'ws://localhost:8192'
+  'ws://3.136.47.223:8192'
   // TODO: add more
 ]
 
 var staticPeers = [
-  'localhost:14722'
+  '3.136.47.223:14722'
   //'rick.kmd.dev:25434'
 ]
 
