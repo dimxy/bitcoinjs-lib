@@ -91,4 +91,16 @@ export const marmaraxy31: Network = {
   scriptHash: 0x55,
   wif: 0xbc,
 };
+
+export const marmaraxy32: Network = {
+  messagePrefix: '\x18MARMARAXY32 asset chain:\n',
+  bech32: 'R',
+  bip32: {
+    public: 0x9A98CAB2,
+    private: 0x00000000,
+  },
+  pubKeyHash: 0x3c,
+  scriptHash: 0x55,
+  wif: 0xbc,
+};
 // add your chain here:

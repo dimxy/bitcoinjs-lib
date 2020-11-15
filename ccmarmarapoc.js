@@ -22,7 +22,7 @@ else
 const networks = require('./src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy15;
-const mynetwork = networks.marmaraxy31;
+const mynetwork = networks.marmaraxy32;
 
 //const fs = require('fs');
 const classify = require('./src/classify');
