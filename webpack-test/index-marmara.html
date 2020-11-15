@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    .myDiv {
+      border: 1px;
+    }
+    </style>
+    </head>
+<body>
+  <!-- <script type="module">
+    import { Connect } from "./ccfaucetpocbr.js" 
+  
+    function myConnect() {
+      return Connect();
+    }
+  </script> 
+  <script" src="./index.js"></script>-->
+
+   <h2>CC Marmara Demo</h2>
+   <h4>Demo keys:</h4>
+   <table>
+    <tr>
+      <th>Wif</th><th>Pubkey</th>
+    </tr>
+    <tr>
+      <td>UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed</td><td>035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db</td>
+    </tr>
+    <tr>
+      <td>UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu</td><td>034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc</td>
+    </tr>
+   </table>
+
+  <!--<button type="button" onclick="myConnect().then((result)=>{ document.write('Connected!').catch((err)=>{ document.write('could not connect: ' + err.message); }); })">Connect-to-Peer</button>-->
+  <!--<button type="button" onclick="myFunction()">Connect-to-Peer</button>-->
+  <div class="myDiv">
+  <h4>Connect to chain:</h4>
+  <button type="button" id="btnConnect">Connect Peer</button><label id="idConnectRes"></label>
+  </div>
+
+  <div class="myDiv">
+  <h4>MarmaraLock:</h4>
+  <form>
+    <label for="idMarmaraLockWif">Wif:</label>
+    <input type="text" id="idMarmaraLockWif" name="Wif" value="" size=60><br>
+    <label for="idMarmaraLockAmount">Amount:</label>
+    <input type="text" id="idMarmaraLockAmount" name="amount" value="0.00001">
+    <input type="button" id="btnMarmaraLock" value="MarmaraLock">
+  </form> 
+  </div>
+
+  <div class="myDiv">
+    <h4>MarmaraReceive:</h4>
+    <form>
+      <label for="idMarmaraReceiveWif">Wif:</label>
+      <input type="text" id="idMarmaraReceiveWif" name="Wif" value="" size=60><br>
+      <label for="idMarmaraSenderPubkey">Sender Pubkey:</label>
+      <input type="text" id="idMarmaraSenderPubkey" name="Sender Pubkey" value="" size=74>
+      <label for="idMarmaraLoopAmount">Amount:</label>
+      <input type="text" id="idMarmaraLoopAmount" name="amount" value="0.00001">
+      <label for="idMarmaraMatures">Matures:</label>
+      <input type="text" id="idMarmaraMatures" name="matures" value="1000">
+      <input type="button" id="btnMarmaraReceive" value="MarmaraReceive">
+    </form> 
+  </div>
+
+  <div class="myDiv">
+    <h4>MarmaraIssue:</h4>
+    <form>
+      <label for="idMarmaraIssueWif">Wif:</label>
+      <input type="text" id="idMarmaraIssueWif" name="Wif" value="" size=60><br>
+      <label for="idMarmaraReceiveTxid">Receive Txid:</label>
+      <input type="text" id="idMarmaraReceiveTxid" name="Receive Txid" value="" size=70>
+      <label for="idMarmaraReceiverPubkey">Receiver Pubkey:</label>
+      <input type="text" id="idMarmaraReceiverPubkey" name="Receiver Pubkey" value="" size=74>
+      <input type="button" id="btnMarmaraIssue" value="MarmaraIssue">
+    </form> 
+  </div>    
+  
+  <h4>Transaction:</h4>
+  <p>
+  <label>txhex:</label><br>
+  <textarea id="idTxhex" rows="8" cols="100"></textarea> <button type="button" id="btnBroadcast">Broadcast</button><br>
+  <label>txid: </label><label id="idTxid"></label>
+  </p>
+
+  <h4>MarmaraInfo:</h4>
+  <p>
+    <label for="idMarmaraInfoPubkey">Pubkey:</label>
+    <input type="text" id="idMarmaraInfoPubkey" name="Pubkey" value="" size=74>
+    <input type="button" id="btnMarmaraInfo" value="MarmaraInfo"><br>
+    <!--<label>marmarainfo: </label> -->
+    <textarea id="idMarmaraInfo" rows="20" cols="100"></textarea>
+    <!--<label id="idMarmaraInfo"></label>-->
+  </p>
+
+<script src="./ccmarmarapocbr-bundle.js"></script>
+<script>
+  //console.log(myLibrary)
+  //console.log(myLibrary.Connect())
+  document.getElementById("btnConnect").onclick = myConnect; 
+  document.getElementById("btnMarmaraLock").onclick = marmaraLock; 
+  document.getElementById("btnMarmaraReceive").onclick = marmaraReceive; 
+  document.getElementById("btnMarmaraIssue").onclick = marmaraIssue; 
+  document.getElementById("btnBroadcast").onclick = broadcastTxhex; 
+  document.getElementById("btnMarmaraInfo").onclick = marmaraInfo; 
+
+  localStorage.debug = 'bitcoin-net:peer,bitcoin-net:peergroup'
+  var connected = false;
+
+  function myConnect() {
+    myLibrary.Connect()
+      .then(()=>{ 
+        console.log('in browser: connected to peer'); 
+        //console.log('res:', res, 'peer:', peer)
+        document.getElementById("idConnectRes").innerHTML = ' connected';
+        connected = true;
+      }) 
+      .catch((err, peer) => {
+        console.log('connect error:', err, 'peer:', peer);
+        document.getElementById("idConnectRes").innerHTML = ' connect error: '+err.message;
+      })
+  }
+
+  function marmaraLock() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let wif = document.getElementById("idMarmaraLockWif").value;
+    let amount = parseFloat(document.getElementById("idMarmaraLockAmount").value);
+
+    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxid").innerHTML = '';
+
+    myLibrary.marmaraLock(wif, amount)
+      .then((res)=>{ 
+        document.getElementById("idTxhex").value = res.txhex;
+      }) 
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+      })
+  }
+
+  function marmaraReceive() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let wif = document.getElementById("idMarmaraReceiveWif").value;
+    let senderpk = document.getElementById("idMarmaraSenderPubkey").value;
+    let amount = parseFloat(document.getElementById("idMarmaraLoopAmount").value);
+    let matures = parseInt(document.getElementById("idMarmaraMatures").value);
+
+    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxid").innerHTML = '';
+
+
+    myLibrary.marmaraReceive(wif, senderpk, amount, matures)
+      .then((res)=>{ 
+        document.getElementById("idTxhex").value = res.txhex;
+      }) 
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+      })
+  }
+
+  function marmaraIssue() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let wif = document.getElementById("idMarmaraIssueWif").value;
+    let receivetxid = document.getElementById("idMarmaraReceiveTxid").value;
+    let receiverpk = document.getElementById("idMarmaraReceiverPubkey").value;
+
+    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxid").innerHTML = '';
+
+    myLibrary.marmaraIssue(wif, receivetxid, receiverpk)
+      .then((res)=>{ 
+        document.getElementById("idTxhex").value = res.txhex;
+      }) 
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+      })
+  }
+
+  function broadcastTxhex() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let txhex = document.getElementById("idTxhex").value;
+
+    myLibrary.broadcastTxhex(txhex)
+      .then((res)=>{ 
+        if (res.retcode >= 0)
+          document.getElementById("idTxid").innerHTML = res.txid;
+        else
+          document.getElementById("idTxid").innerHTML = "error: " + res.retcode;
+      }) 
+      .catch(err=>{
+        console.log('create error=', err)
+        document.getElementById("idTxid").innerHTML = 'broadcast tx error: '+err.message;
+      })
+  }
+
+  function marmaraInfo() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let pk = document.getElementById("idMarmaraInfoPubkey").value;
+
+    myLibrary.marmaraInfo0000(pk)
+      .then((res)=>{ 
+        document.getElementById("idMarmaraInfo").value = JSON.stringify(res, null, '\t');
+        console.log('res=', JSON.stringify(res, null, '\t'));
+      }) 
+      .catch(err=>{
+        console.log('error=', err)
+        document.getElementById("idMarmaraInfo").innerHTML = 'error: '+err.message;
+      })
+  }
+
+</script>
+</body>
+</html>
