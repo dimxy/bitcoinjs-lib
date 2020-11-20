@@ -22,7 +22,7 @@ else
 const networks = require('./src/networks');
 //const mynetwork = networks.rick; 
 //const mynetwork = networks.dimxy15;
-const mynetwork = networks.marmaraxy32;
+const mynetwork = networks.marmaraxy31;
 
 //const fs = require('fs');
 const classify = require('./src/classify');
@@ -31,17 +31,19 @@ const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 //const { dimxy14 } = require('./src/networks');
 
 const EVAL_MARMARA = 0xef;
+const MARMARA_OPRET_VERSION2 = 2;
+
 const marmaraGlobalPkHex = "03afc5be570d0ff419425cfcc580cc762ab82baad88c148f5b028d7db7bfeee61d";
 const marmaraGlobalPrivkey = Buffer.from([ 0x7c, 0x0b, 0x54, 0x9b, 0x65, 0xd4, 0x89, 0x57, 0xdf, 0x05, 0xfe, 0xa2, 0x62, 0x41, 0xa9, 0x09, 0x0f, 0x2a, 0x6b, 0x11, 0x2c, 0xbe, 0xbd, 0x06, 0x31, 0x8d, 0xc0, 0xb9, 0x96, 0x76, 0x3f, 0x24 ]);
 const marmaraGlobalAddress = "RGLSRDnUqTB43bYtRtNVgmwSSd1sun2te8";
 
 const issuerwif = 'UpUdyyTPFsXv8s8Wn83Wuc4iRsh5GDUcz8jVFiE3SxzFSfgNEyed';  // 035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db
-const issuesCCaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
-const endorserwif = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu'; 
+// const issuerCCaddress = 'RJXkCF7mn2DRpUZ77XBNTKCe55M2rJbTcu';
+const endorserwif = 'UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu'; // 034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc
 // 'UwoxbMPYh4nnWbzT4d4Q1xNjx3n9rzd6BLuato7v3G2FfvpKNKEq';
-const endorserCCaddress = 'RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef'; // 034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc
+// const endorserCCaddress = 'RR2nTYFBPTJafxQ6en2dhUgaJcMDk4RWef'; 
 //'RCrTxfdaGL4sc3mpECfamD3wh4YH5K8HAP';
-const holderwif = "";
+const holderwif = "UuiZgPmUeo3Qe6BPH8GiSxqzFLN7MgJmw8SRijF9AFJoEsDFpMys"; // 0306ecb5e98f517cb2e58922404049ec3d2ca1b72c66a784a7a8dfdd03eb33312b
 
 
 var defaultPort = 14722
@@ -51,12 +53,15 @@ var dnsSeeds = [
 //  "localhost"
 ]
 var webSeeds = [
-  'ws://3.136.47.223:8192'
+  //'ws://3.136.47.223:8192'
+  'ws://localhost:8192'
+
   // TODO: add more
 ]
 
 var staticPeers = [
-  '3.136.47.223:14722'
+  //'3.136.47.223:14722'
+  'localhost:14722'
   //'rick.kmd.dev:25434'
 ]
 
@@ -121,13 +126,90 @@ function marmaraAddActivatedInputs(peers, _mypk, _pk, _amount)
   });
 }
 
+function marmaraAddLockedInLoopInputs(peers, mypk, batontxid)
+{
+  return new Promise((resolve, reject) => {
+
+    //let mypk = Buffer.isBuffer(_mypk) ? _mypk.toString('hex') : _mypk;
+    if (!ccutils.IsValidPubKey(mypk))  {
+      reject(new Error('invalid mypk'));
+      return;
+    }
+      
+    //let batontxid = Buffer.isBuffer(_batontxid) ? ccutils.txidToHex(_batontxid) : _batontxid;
+    if (!ccutils.IsValidTxid(batontxid)) {
+      reject(new Error('invalid baton txid'));
+      return;
+    }
+
+    peers.nspvRemoteRpc("marmaraaddlockedinloopinputs", mypk.toString('hex'), ccutils.txidToHex(batontxid), {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+function marmaraGetCreditLoop(peers, mypk, batontxid)
+{
+  return new Promise((resolve, reject) => {
+
+    //let mypk = Buffer.isBuffer(_mypk) ? _mypk.toString('hex') : _mypk;
+    if (!ccutils.IsValidPubKey(mypk))  {
+      reject(new Error('invalid mypk'));
+      return;
+    }
+      
+    //let batontxid = Buffer.isBuffer(_batontxid) ? ccutils.txidToHex(_batontxid) : _batontxid;
+    if (!ccutils.IsValidTxid(batontxid)) {
+      reject(new Error('invalid baton txid'));
+      return;
+    }
+
+    peers.nspvRemoteRpc("marmaracreditloop", mypk, ccutils.txidToHex(batontxid), {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
+function marmaraReceiveList(peers, _mypk)
+{
+  return new Promise((resolve, reject) => {
+
+    //let mypk = Buffer.isBuffer(_mypk) ? _mypk.toString('hex') : _mypk;
+    if (!ccutils.IsValidPubKey(_mypk))  {
+      reject(new Error('invalid mypk'));
+      return;
+    }
+
+    let mypkhex = _mypk.toString('hex');
+    peers.nspvRemoteRpc("marmarareceivelist", mypkhex, mypkhex, {}, (err, res, peer) => {
+      //console.log('err=', err, 'res=', res);
+      if (!err) 
+        resolve(res);
+      else
+        reject(err);
+    });
+  });
+}
+
 function marmaraInfo(peers, _mypk)
 {
   return new Promise((resolve, reject) => {
 
-    let mypk = Buffer.isBuffer(_mypk) ? _mypk.toString('hex') : _mypk;
+    if (!ccutils.IsValidPubKey(_mypk))  {
+      reject(new Error('invalid mypk'));
+      return;
+    }
+    let mypkhex = _mypk.toString('hex');
 
-    peers.nspvRemoteRpc("marmarainfo", mypk, ['0', '0', '0', '0', mypk], {}, (err, res, peer) => {
+    peers.nspvRemoteRpc("marmarainfo", mypkhex, ['0', '0', '0', '0', mypkhex], {}, (err, res, peer) => {
       //console.log('err=', err, 'res=', res);
       if (!err) 
         resolve(res);
@@ -193,18 +275,24 @@ if (!process.browser)
       //let receiveret = await marmaraReceive(endorserwif, '035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db', 0.1, 100);
       //console.log('receiveret.txhex=', receiveret.txhex, 'receiveret.txid=', receiveret.txid);
 
-      //let issueret = await marmaraIssue(issuerwif, '8285a8b39fb3d86cd7d8190a6cd91abb310b84f3256c582b2fa487e6ef391bc8', ecpair.fromWIF(endorserwif, mynetwork).publicKey.toString('hex'));
+      //let issueret = await marmaraIssue(issuerwif, '550d06bd9ab19e28d0bfc38415b38a994fc46fea2da2426bf7b9d798def14521', ecpair.fromWIF(endorserwif, mynetwork).publicKey.toString('hex'));
       //let issueret = await marmaraIssue(issuerwif, '316f7331d23e30d88a983d5a5b6b090c946a91a820203d663876e5ce3e13c78f', '035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db');
       //console.log('issueret.txhex=', issueret.txhex, 'issueret.txid=', issueret.txid);
-
-      //let { transfertxhex, transfertxid } = await marmaraTransfer(issuetxid, faucetgetaddress);
-      //console.log('transfertxhex=', transfertxhex, 'transfertxid=', transfertxid);
 
       //let broadcastret = await broadcast(peers, "0000000000000000000000000000000000000000000000000000000000000000", "0400008085202f8901b9d272e8ff0fed25735c1a7023acfbe7d788dec168b03de95bdb8155406c644a00ca9a3b0201e2ffffffff0280c3c901000000001976a914acc878cb6f4f9f57d1741c8258589ffbb5765c5488ac0000000000000000f16a4ceee21195f2ae1bcdeb74c36a31b7f07943c1731cc25504032a8f79d6b1eca0e5f84d20ce8ce618000400008085202f890105dd0b7151e02a21213ab30c1cdffc4fee57cb6074b1dadfeb3520ae1914da990100000048473044022036ff535d9420f01d56cd9276a718932509e0f9948bd231ac717cc55899d495770220521af8d7f8e96e3a286ae0ac7fb213fe995d509b26c5b87e0c6f5e1e3ade03c901ffffffff0180c3c90100000000306a2ee28efefefe7f065055424b4559cadcea46b009b3522a043cc64e1e0fb7583926f8f773a81143af5513d272dfc100000000003f010000000000000000000000000000000000000000000000000000000000000000");
       //console.log("broadcastret=", broadcastret)
 
-      let marmarainfores = await marmaraInfo0000('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db')
-      console.log('marmarainfores=', JSON.stringify(marmarainfores,null,'\t'));
+      //let marmarainfores = await marmaraInfo0000('035d3b0f2e98cf0fba19f80880ec7c08d770c6cf04aa5639bc57130d5ac54874db')
+      //console.log('marmarainfores=', JSON.stringify(marmarainfores,null,'\t'));
+
+      //let marmaracreditloopres = await marmaraGetCreditLoop(peers, ecpair.fromWIF(endorserwif, mynetwork).publicKey, ccutils.txidFromHex('ybef0a01cb7e5b876863b8943df7958bca9450e1a09fde8bbf803c4923004da4e'))
+      //console.log('marmaracreditloopres=', JSON.stringify(marmaracreditloopres, null, '\t'));
+
+      //let receive2ret = await marmaraReceiveNext(holderwif, '034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc', 'bef0a01cb7e5b876863b8943df7958bca9450e1a09fde8bbf803c4923004da4e');
+      //console.log('receive2ret.txhex=', receive2ret.txhex, 'receive2ret.txid=', receive2ret.txid);
+
+      let transferret = await marmaraTransfer(endorserwif, 'a277500951163ed1fe50da8e32d994535e61934a95405ff60646915b46660ce6', '0306ecb5e98f517cb2e58922404049ec3d2ca1b72c66a784a7a8dfdd03eb33312b');
+      console.log('transferret.txhex=', transferret.txhex, 'transferret.txid=', transferret.txid);
 
     }
     catch(err) {
@@ -218,7 +306,7 @@ async function marmaraLock(_wif, _amount) {
   let wif = _wif;
   if (typeof _amount !== 'number')
     throw new Error('invalid amount');
-  let amount = _amount * 10e8;
+  let amount = ccutils.toSatoshi(_amount);
   return await makeMarmaraLockTx(wif, amount);
 }
 
@@ -232,7 +320,7 @@ async function marmaraReceive(_wif, _senderpk, _amount, _matures) {
 
   if (typeof _amount !== 'number')
     throw new Error('invalid amount');
-  let amount = _amount * 10e8;
+  let amount = ccutils.toSatoshi(_amount);
 
   let currency = 'MARMARA';
 
@@ -243,47 +331,95 @@ async function marmaraReceive(_wif, _senderpk, _amount, _matures) {
   return await makeMarmaraReceiveTx(wif, senderpk, amount, currency, matures, undefined);
 }
 
+exports.marmaraReceiveNext = marmaraReceiveNext;
+async function marmaraReceiveNext(_wif, _senderpk, _batontxid) {
+  let wif = _wif;
+
+  if (typeof _senderpk !== 'string' || _senderpk.length != 66)
+    throw new Error('invalid public key');
+  let senderpk = Buffer.from(_senderpk, 'hex');//  ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+
+  let batontxid;
+  if (_batontxid !== undefined)   
+    batontxid = ccutils.txidFromHex(_batontxid);
+  if (!batontxid)
+    throw new Error('invalid baton txid');
+
+  return await makeMarmaraReceiveTx(wif, senderpk, undefined, undefined, undefined, batontxid);
+}
+
 exports.marmaraIssue = marmaraIssue;
 async function marmaraIssue(_wif, _receivetxid, _destpk) {
   let wif = _wif || issuerwif;
-  if (typeof _receivetxid !== 'string' || _receivetxid.length != 64)
-    throw new Error('invalid txid');
-  let receivetxid = Buffer.from(_receivetxid, 'hex');
-  bufferutils.reverseBuffer(receivetxid);
-  if (typeof _destpk !== 'string' || _destpk.length != 66)
-    throw new Error('invalid public key');
-  let destpk = Buffer.from(_destpk, 'hex'); // ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+  let receivetxid = ccutils.txidFromHex(_receivetxid);
+  if (!ccutils.IsValidTxid(receivetxid))
+    throw new Error('invalid receive txid');
 
+  let destpk;
+  if (typeof _destpk === 'string')
+    destpk = Buffer.from(_destpk, 'hex'); // ecpair.fromWIF(endorserwif, mynetwork).publicKey;
+  if (!Buffer.isBuffer(destpk) || destpk.length != 33)
+    throw new Error('invalid public key');
   return await makeMarmaraIssueTx(wif, receivetxid, destpk);
 }
 
 exports.marmaraTransfer = marmaraTransfer;
-async function marmaraTransfer(_wif, _destpk, issuetxid) {
-  let wif = _wif || endorserwif;
-  let destpk = _destpk || ecpair.fromWIF(eholderwif, mynetwork).publicKey;
-  return await makeMarmaraTransferTx(wif, issuetxid, destpk);
-}
+async function marmaraTransfer(_wif, _receivetxid, _destpk) {
+  let wif = _wif; // || endorserwif;
 
-exports.marmaraIssue = marmaraIssue;
-async function marmaraIssue(_wif, _receivetxid, _destpk) {
-  let wif = _wif || issuerwif;
-  if (typeof _receivetxid !== 'string' || _receivetxid.length != 64)
-    throw new Error('invalid txid');
-  let receivetxid = Buffer.from(_receivetxid, 'hex');
-  bufferutils.reverseBuffer(receivetxid);
-  if (typeof _destpk !== 'string' || _destpk.length != 66)
+  let receivetxid = ccutils.txidFromHex(_receivetxid);
+  if (!ccutils.IsValidTxid(receivetxid))
+    throw new Error('invalid receive txid');
+
+  let destpk = Buffer.from(_destpk, 'hex') // || ecpair.fromWIF(eholderwif, mynetwork).publicKey;
+  if (!ccutils.IsValidPubKey(destpk))
     throw new Error('invalid public key');
-  let destpk = Buffer.from(_destpk, 'hex'); // ecpair.fromWIF(endorserwif, mynetwork).publicKey;
-
-  return await makeMarmaraIssueTx(wif, receivetxid, destpk);
+  return await makeMarmaraTransferTx(wif, receivetxid, destpk);
 }
 
-exports.marmaraInfo0000 = marmaraInfo0000;
-async function marmaraInfo0000(pk) {
-  if (typeof pk !== 'string' || pk.length != 66)
-    throw new Error('invalid public key');
-  return await marmaraInfo(peers, pk);
+exports.marmaraReceiveListWrapper = marmaraReceiveListWrapper;
+async function marmaraReceiveListWrapper(pk) {
+  //if (typeof pk !== 'string' || pk.length != 66)
+  //  throw new Error('invalid public key');
+  return await marmaraReceiveList(peers, Buffer.from(pk, 'hex'));
 }
+
+exports.marmaraInfoWrapper = marmaraInfoWrapper;
+async function marmaraInfoWrapper(pk) {
+  //if (typeof pk !== 'string' || pk.length != 66)
+  //  throw new Error('invalid public key');
+  return await marmaraInfo(peers, Buffer.from(pk, 'hex'));
+}
+
+exports.marmaraGetCreditLoopWrapper = marmaraGetCreditLoopWrapper;
+async function marmaraGetCreditLoopWrapper(mypk, txid) {
+  //if (typeof pk !== 'string' || pk.length != 66)
+  //  throw new Error('invalid public key');
+  return await marmaraGetCreditLoop(peers, Buffer.from(mypk, 'hex'), ccutils.txidFromHex(txid));
+}
+
+async function marmaraGetAndDecodeLoopTx(peers, mypk, txid)
+{
+  let result = await ccutils.getRawTransaction(peers, mypk, txid);
+  //console.log('getRawTransaction result:', result);
+  if (result === undefined)
+    throw new Error('could not get create or request tx');
+  let tx = Transaction.fromBuffer(Buffer.from(result.hex, 'hex'));
+  if (tx === undefined || tx.outs.length < 1)
+    throw new Error('could not decode tx or no opreturn');
+
+  let loopData = marmaraDecodeLoopOpret(tx.outs[tx.outs.length-1].script);
+  
+  if (ccutils.isEmptyObject(loopData))
+    throw new Error('could not decode opreturn');
+  if (!loopData.evalCode || loopData.evalCode != EVAL_MARMARA)
+    throw new Error('not a marmara tx');
+  if (!loopData.funcId)
+    throw new Error('not a marmara loop tx');
+
+  return { loopData: loopData, tx: tx };
+}
+
 
 function marmaraEncodeCoinbaseVData(funcId, destpk, ht)
 {
@@ -345,7 +481,7 @@ function marmaraEncodeLoopVData(createtxid, pk)
   return buffer;
 }
 
-function marmaraDecodeLoopCreateOpret(opret)
+/*function marmaraDecodeLoopCreateOpret(opret)
 {
   let chunks = script.decompile(opret);
   if (chunks.length < 2)
@@ -374,22 +510,91 @@ function marmaraDecodeLoopCreateOpret(opret)
   return { 
     evalCode: evalCode, funcId: Buffer.from([chFuncId]).toString(), version: version, senderpk: senderpk, amount: amount, matures: matures, currency: scurrency 
   };
+}*/
+
+function marmaraDecodeLoopOpret(opret)
+{
+  let chunks = script.decompile(opret);
+  if (chunks.length < 2)
+    return {};
+
+  if (typeof chunks[0] !== 'number' || chunks[0] != OPS.OP_RETURN) {
+    console.log('marmaraDecodeLoopRequestOpret invalid opreturn opcode')
+    return {};
+  }
+
+  if (!Buffer.isBuffer(chunks[1]))  {
+    console.log('marmaraDecodeLoopRequestOpret invalid opreturn data')
+    return {};
+  }
+
+  let bufferReader = new bufferutils.BufferReader(chunks[1]);
+
+  let evalCode = bufferReader.readUInt8();
+  let chFuncId = bufferReader.readUInt8();
+  let sFuncId = Buffer.from([chFuncId]).toString();
+  let version = bufferReader.readUInt8();
+
+  let createtxid;
+  let senderpk;
+  let amount;
+  let matures;
+  let scurrency;
+  let autoSettlement;
+  let autoInsurance;
+  let avalCount;
+  let disputeExpiresHeight;
+  let escrowOn;
+  let blockageAmount;
+
+  switch(sFuncId) {
+    case 'B':
+      senderpk = bufferReader.readVarSlice();
+      amount = bufferReader.readUInt64();
+      matures = bufferReader.readInt32();
+      scurrency = bufferReader.readVarSlice().toString();
+      return { 
+        evalCode: evalCode, funcId: sFuncId, version: version, senderpk: senderpk, amount: amount, matures: matures, currency: scurrency 
+      };
+    case 'R':
+      createtxid = bufferReader.readSlice(32);
+      senderpk = bufferReader.readVarSlice();
+      return { 
+        evalCode: evalCode, funcId: sFuncId, version: version, createtxid: createtxid, senderpk: senderpk
+      };  
+    case 'I':
+      createtxid = bufferReader.readSlice(32);
+      senderpk = bufferReader.readVarSlice();
+      autoSettlement = bufferReader.readUInt8();
+      autoInsurance = bufferReader.readUInt8();
+      avalCount = bufferReader.readInt32();
+      disputeExpiresHeight = bufferReader.readInt32()
+      escrowOn = bufferReader.readUInt8();
+      blockageAmount = bufferReader.readUInt64(blockageAmount)
+      return { 
+        evalCode: evalCode, funcId: sFuncId, version: version, createtxid: createtxid, senderpk: senderpk, autoSettlement: autoSettlement, autoInsurance: autoInsurance, avalCount: avalCount, disputeExpiresHeight: disputeExpiresHeight, escrowOn: escrowOn, blockageAmount: blockageAmount
+      };  
+    case 'T':
+      createtxid = bufferReader.readSlice(32);
+      senderpk = bufferReader.readVarSlice();
+      avalCount = bufferReader.readInt32();
+      return { 
+        evalCode: evalCode, funcId: sFuncId, version: version, createtxid: createtxid, senderpk: senderpk, avalCount: avalCount
+      };  
+    }
+
+  return {};
 }
 
-function marmaraEncodeLoopRequestOpret(version, _createtxid, senderpk)
+function marmaraEncodeLoopRequestOpret(version, createtxid, senderpk)
 {
   let buffer = Buffer.allocUnsafe(1+1+1 + 32 + 1+senderpk.length);
   let bufferWriter = new bufferutils.BufferWriter(buffer);
 
-  let createtxid;
-  if (!Buffer.isBuffer(_createtxid) || _createtxid.length != 0 && _createtxid.length != 32) {
+  if (!ccutils.IsValidTxid(createtxid)) {
     console.log('marmaraEncodeLoopRequestOpReturn: invalid createtxid');
     return Buffer.from([]);
   }
-  if (_createtxid.length == 0)
-    createtxid = Buffer.alloc(32);
-  else
-    createtxid = _createtxid;
 
   bufferWriter.writeUInt8(EVAL_MARMARA);
   bufferWriter.writeUInt8('R'.charCodeAt(0));
@@ -399,13 +604,13 @@ function marmaraEncodeLoopRequestOpret(version, _createtxid, senderpk)
   return script.compile([OPS.OP_RETURN, buffer]);
 }
 
-function marmaraEncodeLoopIssuerOpret(version, createtxid, receiverpk)
+function marmaraEncodeLoopIssueOpret(version, createtxid, receiverpk)
 {
   let buffer = Buffer.allocUnsafe(1+1+1 + 32 + 1+receiverpk.length + 1+1+4+4+1+8);
   let bufferWriter = new bufferutils.BufferWriter(buffer);
 
-  if (!Buffer.isBuffer(createtxid) || createtxid.length != 32) {
-    console.log('marmaraEncodeLoopIssuerOpret: invalid createtxid');
+  if (!ccutils.IsValidTxid(createtxid)) {
+    console.log('marmaraEncodeLoopIssueOpret: invalid createtxid');
     return Buffer.from([]);
   }
   let autoSettlement = 1;
@@ -422,10 +627,35 @@ function marmaraEncodeLoopIssuerOpret(version, createtxid, receiverpk)
   bufferWriter.writeVarSlice(receiverpk);
   bufferWriter.writeUInt8(autoSettlement);
   bufferWriter.writeUInt8(autoInsurance);
-  bufferWriter.writeUInt32(avalCount);
-  bufferWriter.writeUInt32(disputeExpiresHeight);
+  bufferWriter.writeInt32(avalCount);
+  bufferWriter.writeInt32(disputeExpiresHeight);
   bufferWriter.writeUInt8(escrowOn);
   bufferWriter.writeUInt64(blockageAmount);
+  return script.compile([OPS.OP_RETURN, buffer]);
+}
+
+function marmaraEncodeLoopTransferOpret(version, createtxid, receiverpk)
+{
+  let buffer = Buffer.allocUnsafe(1+1+1 + 32 + 1+receiverpk.length + 4);
+  let bufferWriter = new bufferutils.BufferWriter(buffer);
+
+  let avalCount = 0;
+
+  if (!ccutils.IsValidTxid(createtxid)) {
+    console.log('marmaraEncodeLoopTransferOpret: invalid createtxid');
+    return Buffer.from([]);
+  }
+  if (!ccutils.IsValidPubKey(receiverpk)) {
+    console.log('marmaraEncodeLoopTransferOpret: invalid pubkey');
+    return Buffer.from([]);
+  }
+
+  bufferWriter.writeUInt8(EVAL_MARMARA);
+  bufferWriter.writeUInt8('T'.charCodeAt(0));
+  bufferWriter.writeUInt8(version);
+  bufferWriter.writeSlice(createtxid);
+  bufferWriter.writeVarSlice(receiverpk);
+  bufferWriter.writeInt32(avalCount);
   return script.compile([OPS.OP_RETURN, buffer]);
 }
 
@@ -442,6 +672,8 @@ async function makeMarmaraLockTx(wif, amount)
   const markerAmount = 10000;
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
+
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.publicKey, amount + markerAmount + txfee);
 
   let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
@@ -527,6 +759,7 @@ async function makeMarmaraReceiveTx(wif, senderpk, loopAmount, currency, matures
   const amount = requestfee;
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
   let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.publicKey, amount + txfee);
 
   let tx = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
@@ -559,15 +792,20 @@ async function makeMarmaraReceiveTx(wif, senderpk, loopAmount, currency, matures
   if (ccSpk == null)  {
     throw new Error('could not create marmara cc spk');
   }
-  psbt.addOutput({ script: ccSpk, value: requestfee});
+  psbt.addOutput({ script: ccSpk, value: requestfee}); // request utxo
 
-  psbt.addOutput({ address: ccutils.pubkey2NormalAddressKmd(mypair.publicKey), value: added - amount - txfee});  // change
+  psbt.addOutput({ address: ccutils.pubkey2NormalAddressKmd(mypair.publicKey), value: added - amount - txfee});  // normal change
 
   let opret;
-  if (batontxid !== undefined)
-    opret = marmaraEncodeLoopRequestOpret(2, batontxid, senderpk);
+  if (batontxid !== undefined)   {
+    wait1sec(); // after prev nspv remoterpc to get over nspv rate limiter
+    let loopinfo = await marmaraGetCreditLoop(peers, mypair.publicKey, batontxid);  // get loop to get createtxid
+    if (loopinfo.createtxid === undefined)
+      throw new Error('invalid credit loop returned');
+    opret = marmaraEncodeLoopRequestOpret(MARMARA_OPRET_VERSION2, ccutils.txidFromHex(loopinfo.createtxid), senderpk);
+  }
   else
-    opret = marmaraEncodeLoopCreateOpret(2, senderpk, loopAmount, matures, currency);
+    opret = marmaraEncodeLoopCreateOpret(MARMARA_OPRET_VERSION2, senderpk, loopAmount, matures, currency);
   psbt.addOutput({ script: opret, value: 0});
 
 
@@ -581,6 +819,7 @@ async function makeMarmaraReceiveTx(wif, senderpk, loopAmount, currency, matures
   return { txhex: txOut.toHex(), txid: txOut.getId() };
 }
 
+// marmaraissue tx creation
 async function makeMarmaraIssueTx(wif, createtxid, receiverpk) 
 {
   // init lib cryptoconditions
@@ -595,7 +834,7 @@ async function makeMarmaraIssueTx(wif, createtxid, receiverpk)
 
   let mypair = ecpair.fromWIF(wif, mynetwork);
 
-  let rawcreatetx = await ccutils.getRawTransaction(peers, mypair.publicKey, createtxid);
+  /*let rawcreatetx = await ccutils.getRawTransaction(peers, mypair.publicKey, createtxid);
   if (rawcreatetx === undefined)
     throw new Error('could not get tx for createtxid')
   let createtx = Transaction.fromBuffer(Buffer.from(rawcreatetx.hex, 'hex'));
@@ -609,34 +848,42 @@ async function makeMarmaraIssueTx(wif, createtxid, receiverpk)
   if (loopData.evalCode != EVAL_MARMARA)
     throw new Error('not a marmara tx')
   if (loopData.funcId != 'B')
-    throw new Error('not a marmara create tx')
+    throw new Error('not a marmara create tx')*/
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
+  let createTxData = await marmaraGetAndDecodeLoopTx(peers, mypair.publicKey, createtxid);
+  if (createTxData.loopData.funcId != 'B')
+    throw new Error('not a marmara create tx');
 
-  
-  wait1sec(); // after prev nspv remoterpc 
-  let txwccutxos = await marmaraAddActivatedInputs(peers, mypair.publicKey, mypair.publicKey, loopData.amount);
+  wait1sec(); // after prev nspv remoterpc to get over nspv rate limiter
+  let txwccutxos = await marmaraAddActivatedInputs(peers, mypair.publicKey, mypair.publicKey, createTxData.loopData.amount);
   let txccs = Transaction.fromBuffer(Buffer.from(txwccutxos.txhex, 'hex'));
 
   let psbt = new Psbt({network: mynetwork});
   psbt.setVersion(txccs.version);
   psbt.__CACHE.__TX.versionGroupId = txccs.versionGroupId;
 
-  let ccadded = ccutils.addInputsFromPreviousTxns(psbt, txccs, txwccutxos.previousTxns);
-  if (ccadded < loopData.amount)
-    throw new Error("insufficient marmara cc inputs (" + ccadded + ")");
+  let ccAdded = ccutils.addInputsFromPreviousTxns(psbt, txccs, txwccutxos.previousTxns);
+  if (ccAdded < createTxData.loopData.amount)
+    throw new Error("insufficient marmara cc inputs (" + ccAdded + ")");
 
-  // spend receive tx:
+  // spend create tx:
   let inputData = { hash: createtxid, index: 0 };
-  inputData.nonWitnessUtxo = Buffer.from(rawcreatetx.hex, 'hex');
+  inputData.nonWitnessUtxo = createTxData.tx.toBuffer();
   psbt.addInput(inputData);
 
   // add normals
+  let normalAmount = createTxData.tx.outs[0].value - (loopMarkerAmount + openMarkerAmount + txfee);
+  if (normalAmount <= 0)
+    normalAmount = txfee;
   wait1sec();
-  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.publicKey, loopMarkerAmount /*+ openMarkerAmount*/ + txfee); // openMarkerAmount is funded from createtx
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.publicKey, normalAmount); // openMarkerAmount is funded from requesttx
   let txnormals = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
-  let added = ccutils.addInputsFromPreviousTxns(psbt, txnormals, txwutxos.previousTxns);
-  if (added < loopData.amount)
-    throw new Error("insufficient normal inputs (" + added + ")")
-
+  let normalAdded = 0;
+  if (normalAmount > 0) {
+    normalAdded = ccutils.addInputsFromPreviousTxns(psbt, txnormals, txwutxos.previousTxns);
+    if (normalAdded < normalAmount)
+      throw new Error("insufficient normal inputs (" + normalAdded + ")")
+  }
 
   let condBaton = {
     type:	"threshold-sha-256",
@@ -750,27 +997,180 @@ async function makeMarmaraIssueTx(wif, createtxid, receiverpk)
   psbt.addOutput({ script: ccSpkBaton, value: batonAmount});  // baton to holder
   psbt.addOutput({ script: ccSpkMarker, value: loopMarkerAmount});  // loop search marker
 
-  psbt.addOutput({ script: ccSpkIssuer, value: loopData.amount/2});  // issuer's half
+  psbt.addOutput({ script: ccSpkIssuer, value: Math.round(createTxData.loopData.amount/2)});  // issuer's half
   psbt.addOutput({ script: ccSpkMarker, value: openMarkerAmount});   // open/closed loop marker
-  psbt.addOutput({ script: ccSpkHolder, value: loopData.amount/2});  // holder's half
+  psbt.addOutput({ script: ccSpkHolder, value: Math.round(createTxData.loopData.amount/2)});  // holder's half
 
-  let ccChange = ccadded - loopData.amount;
+  let ccChange = ccAdded - createTxData.loopData.amount;
   if (ccChange > 0)
     psbt.addOutput({ script: ccSpkActivated, value: ccChange});  // cc change
 
-  let change = added + createtx.outs[0].value - openMarkerAmount - loopMarkerAmount - txfee;
+  let change = normalAdded + ccAdded + createTxData.tx.outs[0].value - (batonAmount + openMarkerAmount + createTxData.loopData.amount + loopMarkerAmount + ccChange + txfee);
   if (change > 0)
     psbt.addOutput({ address: ccutils.pubkey2NormalAddressKmd(mypair.publicKey), value: change });  // change
 
-  let opret = marmaraEncodeLoopIssuerOpret(2, createtxid, receiverpk);
+  let opret = marmaraEncodeLoopIssueOpret(MARMARA_OPRET_VERSION2, createtxid, receiverpk);
   psbt.addOutput({ script: opret, value: 0});
 
-  ccutils.finalizeCCtx(mypair, psbt, [{cond: condActivated}, {cond: condPrevBaton}]); // to spend activated utxo and createtx's baton
+  ccutils.finalizeCCtx(mypair, psbt, [{cond: condActivated}, {cond: condPrevBaton}]); // to spend activated utxo and requesttx's baton
   let txOut = psbt.extractTransaction();
   return { txhex: txOut.toHex(), txid: txOut.getId() };
 }
 
+// marmaratransfer tx creation
+async function makeMarmaraTransferTx(wif, receivetxid, receiverpk) 
+{
+  // init lib cryptoconditions
+  //cryptoconditions = await ccimp;  // always ensure cc is loaded
+  p2cryptoconditions.cryptoconditions = await ccimp;
+
+  //const txbuilder = new TxBuilder.TransactionBuilder(mynetwork);
+  const txfee = 10000;
+  const batonAmount = 10000;
+
+  let mypair = ecpair.fromWIF(wif, mynetwork);
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
+  let requestTxData = await marmaraGetAndDecodeLoopTx(peers, mypair.publicKey, receivetxid);
+  if (!requestTxData || !requestTxData.loopData || !requestTxData.loopData.createtxid || !requestTxData.loopData.funcId || requestTxData.loopData.funcId != 'R')
+    throw new Error('not a marmara request tx');
+
+  //let loopData = requestTxData.loopData;
+  let createtxid = requestTxData.loopData.createtxid;
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
+  let loopinfo = await marmaraGetCreditLoop(peers, mypair.publicKey, createtxid);
+  if (!loopinfo.batontxid || !Array.isArray(loopinfo.creditloop) || loopinfo.creditloop.length < 1 || typeof loopinfo.creditloop[0].issuerpk !== 'string')
+    throw new Error('invalid credit loop returned');
+  let batontxid = ccutils.txidFromHex(loopinfo.batontxid);
+  let issuerpk = Buffer.from(loopinfo.creditloop[0].issuerpk, 'hex');
+  let loopAmount = ccutils.toSatoshi(loopinfo.amount);
+
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
+  let batonTxData = await marmaraGetAndDecodeLoopTx(peers, mypair.publicKey, batontxid);
+ 
+  wait1sec(); // after prev nspv remoterpc, to get over nspv rate limiter
+  let txwccutxos = await marmaraAddLockedInLoopInputs(peers, mypair.publicKey, batontxid);
+  let txccs = Transaction.fromBuffer(Buffer.from(txwccutxos.txhex, 'hex'));
+
+  let psbt = new Psbt({network: mynetwork});
+  psbt.setVersion(txccs.version);
+  psbt.__CACHE.__TX.versionGroupId = txccs.versionGroupId;
+
+  // spend receive tx utxo:
+  let recvInputData = { hash: receivetxid, index: 0 };
+  console.log('receivetxid=', ccutils.txidToHex(receivetxid), requestTxData.tx.getId());
+  recvInputData.nonWitnessUtxo = requestTxData.tx.toBuffer();
+  psbt.addInput(recvInputData);
+
+  // spend baton utxo:
+  let batonInputData = { hash: batontxid, index: 0 };
+  batonInputData.nonWitnessUtxo = batonTxData.tx.toBuffer();
+  psbt.addInput(batonInputData);
+
+  let ccadded = ccutils.addInputsFromPreviousTxns(psbt, txccs, txwccutxos.previousTxns);
+  if (ccadded <= 0)
+    throw new Error("could not add marmara locked in loop inputs");
+
+  // add normals
+  let normalAmount = (requestTxData.tx.outs[0].value + batonTxData.tx.outs[0].value) - (batonAmount + txfee);
+  if (normalAmount <= 0)
+    normalAmount = txfee;
+  wait1sec();  // to pass rate limter
+  let txwutxos = await ccutils.createTxAndAddNormalInputs(peers, mypair.publicKey, normalAmount); // openMarkerAmount is funded from requesttx
+  let txnormals = Transaction.fromBuffer(Buffer.from(txwutxos.txhex, 'hex'));
+  let normalAdded = 0;
+  if (normalAmount > 0) {
+    normalAdded = ccutils.addInputsFromPreviousTxns(psbt, txnormals, txwutxos.previousTxns);
+    if (normalAdded < normalAmount)
+      throw new Error("insufficient normal inputs (" + normalAdded + ")")
+  }
+
+  let condBaton = {
+    type:	"threshold-sha-256",
+    threshold:	2,
+    subfulfillments:	[{
+          type:	"eval-sha-256",   
+          code:	ccutils.byte2Base64(EVAL_MARMARA)     
+      }, {            
+          type:	"threshold-sha-256",
+          threshold:	1,
+          subfulfillments:	[{  
+            type:	"secp256k1-sha-256",
+            publicKey:	receiverpk.toString('hex')
+          }]  
+      }]   
+    };
+
+  let createtxidpk = ccutils.ccTxidPubkey_tweak(createtxid);
+  console.log('createtxidpk=', createtxidpk.toString('hex'));
+  let condLoop = {
+    type:	"threshold-sha-256",
+    threshold:	2,
+    subfulfillments:	[{
+          type:	"eval-sha-256",   
+          code:	ccutils.byte2Base64(EVAL_MARMARA)     
+      }, {            
+          type:	"threshold-sha-256",
+          threshold:	1,
+          subfulfillments:	[
+          {  
+            type:	"secp256k1-sha-256",
+            publicKey:	marmaraGlobalPkHex
+          },  
+          {  
+            type:	"secp256k1-sha-256",
+            publicKey:	createtxidpk.toString('hex')
+          }]  
+      }]   
+    };
+   
+  let condPrevBaton = {
+    type:	"threshold-sha-256",
+    threshold:	2,
+    subfulfillments:	[{
+          type:	"eval-sha-256",   
+          code:	ccutils.byte2Base64(EVAL_MARMARA)     
+      }, {            
+          type:	"threshold-sha-256",
+          threshold:	1,
+          subfulfillments:	[{  
+                  type:	"secp256k1-sha-256",
+                  publicKey:	mypair.publicKey.toString('hex')
+          }]  
+      }]   
+    };
+
+  let ccSpkBaton = p2cryptoconditions.makeCCSpk(condBaton);
+  if (ccSpkBaton == null)  
+    throw new Error('could not create marmara baton cc spk');       
+
+  let ccSpkIssuer = p2cryptoconditions.makeCCSpk(condLoop, p2cryptoconditions.makeOpDropData(EVAL_MARMARA, 1,2, marmaraEncodeLoopVData(createtxid, issuerpk)));
+  if (ccSpkIssuer == null)  
+    throw new Error('could not create marmara cc spk');
+  
+  let ccSpkHolder = p2cryptoconditions.makeCCSpk(condLoop, p2cryptoconditions.makeOpDropData(EVAL_MARMARA, 1,2, marmaraEncodeLoopVData(createtxid, receiverpk)));
+  if (ccSpkHolder == null)  
+    throw new Error('could not create marmara cc spk'); 
+  
+  psbt.addOutput({ script: ccSpkBaton, value: batonAmount});  // baton to holder
+
+  psbt.addOutput({ script: ccSpkIssuer, value: Math.round(loopAmount/2)});  // issuer's half
+  psbt.addOutput({ script: ccSpkHolder, value: Math.round(loopAmount/2)});  // holder's half
+
+  let change = (normalAdded + requestTxData.tx.outs[0].value + batonTxData.tx.outs[0].value) - batonAmount - txfee;
+  if (change > 0)
+    psbt.addOutput({ address: ccutils.pubkey2NormalAddressKmd(mypair.publicKey), value: change });  // normal change
+
+  let opret = marmaraEncodeLoopTransferOpret(MARMARA_OPRET_VERSION2, createtxid, receiverpk);
+  psbt.addOutput({ script: opret, value: 0});  // loop opreturn
+
+  ccutils.finalizeCCtx(mypair, psbt, [{cond: condLoop, privateKey: marmaraGlobalPrivkey }, {cond: condPrevBaton}]); // to spend prev loop utxos and requesttx's and batontx
+  let txOut = psbt.extractTransaction();
+  return { txhex: txOut.toHex(), txid: txOut.getId() };
+}
+
+
 // helpers:
+
 function wait1sec() {
   var t0 = new Date().getSeconds();
   do {

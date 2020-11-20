@@ -29,6 +29,9 @@
     <tr>
       <td>UuKUSQHnRGk4CDbRnbLRrJHq5Dwx58qR9Q9K2VpJjn3APXLurNcu</td><td>034777b18effce6f7a849b72de8e6810bf7a7e050274b3782e1b5a13d0263a44dc</td>
     </tr>
+    <tr>
+      <td>UuiZgPmUeo3Qe6BPH8GiSxqzFLN7MgJmw8SRijF9AFJoEsDFpMys</td><td>0306ecb5e98f517cb2e58922404049ec3d2ca1b72c66a784a7a8dfdd03eb33312b</td>
+    </tr>
    </table>
 
   <!--<button type="button" onclick="myConnect().then((result)=>{ document.write('Connected!').catch((err)=>{ document.write('could not connect: ' + err.message); }); })">Connect-to-Peer</button>-->
@@ -46,6 +49,7 @@
     <label for="idMarmaraLockAmount">Amount:</label>
     <input type="text" id="idMarmaraLockAmount" name="amount" value="0.00001">
     <input type="button" id="btnMarmaraLock" value="MarmaraLock">
+    <label id="idMarmaraLockNotify"></label>
   </form> 
   </div>
 
@@ -61,6 +65,7 @@
       <label for="idMarmaraMatures">Matures:</label>
       <input type="text" id="idMarmaraMatures" name="matures" value="1000">
       <input type="button" id="btnMarmaraReceive" value="MarmaraReceive">
+      <label id="idMarmaraReceiveNotify"></label>
     </form> 
   </div>
 
@@ -74,8 +79,37 @@
       <label for="idMarmaraReceiverPubkey">Receiver Pubkey:</label>
       <input type="text" id="idMarmaraReceiverPubkey" name="Receiver Pubkey" value="" size=74>
       <input type="button" id="btnMarmaraIssue" value="MarmaraIssue">
+      <label id="idMarmaraIssueNotify"></label>
     </form> 
   </div>    
+
+  <div class="myDiv">
+    <h4>MarmaraReceive for Transfer:</h4>
+    <form>
+      <label for="idMarmaraReceiveForTransferWif">Wif:</label>
+      <input type="text" id="idMarmaraReceiveForTransferWif" name="Wif" value="" size=60><br>
+      <label for="idMarmaraTransferSenderPubkey">Sender Pubkey:</label>
+      <input type="text" id="idMarmaraTransferSenderPubkey" name="Sender Pubkey" value="" size=74>
+      <label for="idMarmaraBatonTxid">BatonTxid:</label>
+      <input type="text" id="idMarmaraBatonTxid" value="" size=70>
+      <input type="button" id="btnMarmaraReceiveNext" value="MarmaraReceive for Transfer">
+      <label id="idMarmaraReceiveNextNotify"></label>
+    </form> 
+  </div>
+
+  <div class="myDiv">
+    <h4>MarmaraTransfer:</h4>
+    <form>
+      <label for="idMarmaraTransferWif">Wif:</label>
+      <input type="text" id="idMarmaraTransferWif" name="Wif" value="" size=60><br>
+      <label for="idMarmaraReceiveForTransferTxid">Receive Txid:</label>
+      <input type="text" id="idMarmaraReceiveForTransferTxid" name="Receive Txid" value="" size=70>
+      <label for="idMarmaraTransferReceiverPubkey">Receiver Pubkey:</label>
+      <input type="text" id="idMarmaraTransferReceiverPubkey" name="Receiver Pubkey" value="" size=74>
+      <input type="button" id="btnMarmaraTransfer" value="MarmaraTransfer">
+      <label id="idMarmaraTransferNotify"></label>
+    </form> 
+  </div> 
   
   <h4>Transaction:</h4>
   <p>
@@ -94,6 +128,25 @@
     <!--<label id="idMarmaraInfo"></label>-->
   </p>
 
+  <h4>MarmaraReceiveList:</h4>
+  <p>
+    <label for="idMarmaraReceiveListPubkey">Pubkey:</label>
+    <input type="text" id="idMarmaraReceiveListPubkey" name="Pubkey" value="" size=74>
+    <input type="button" id="btnMarmaraReceiveList" value="MarmaraReceiveList"><br>
+    <!--<label>marmarainfo: </label> -->
+    <textarea id="idMarmaraReceiveListResults" rows="20" cols="100"></textarea>
+  </p>
+
+  <h4>MarmaraGetCreditLoopList:</h4>
+  <p>
+    <label for="idMarmaraGetCreditLoopPubkey">Pubkey:</label>
+    <input type="text" id="idMarmaraGetCreditLoopPubkey" name="Pubkey" value="" size=74>
+    <label for="idMarmaraGetCreditLoopBatonTxid">Baton Txid:</label>
+    <input type="text" id="idMarmaraGetCreditLoopBatonTxid" value="" size=70>
+    <input type="button" id="btnMarmaraGetCreditLoop" value="MarmaraGetCreditLoop"><br>
+    <textarea id="idMarmaraGetCreditLoopResults" rows="20" cols="100"></textarea>
+  </p>
+
 <script src="./ccmarmarapocbr-bundle.js"></script>
 <script>
   //console.log(myLibrary)
@@ -101,14 +154,20 @@
   document.getElementById("btnConnect").onclick = myConnect; 
   document.getElementById("btnMarmaraLock").onclick = marmaraLock; 
   document.getElementById("btnMarmaraReceive").onclick = marmaraReceive; 
+  document.getElementById("btnMarmaraReceiveNext").onclick = marmaraReceiveNext; 
   document.getElementById("btnMarmaraIssue").onclick = marmaraIssue; 
+  document.getElementById("btnMarmaraTransfer").onclick = marmaraTransfer; 
   document.getElementById("btnBroadcast").onclick = broadcastTxhex; 
   document.getElementById("btnMarmaraInfo").onclick = marmaraInfo; 
+  document.getElementById("btnMarmaraReceiveList").onclick = marmaraReceiveList; 
+  document.getElementById("btnMarmaraGetCreditLoop").onclick = marmaraGetCreditLoop; 
+
 
   localStorage.debug = 'bitcoin-net:peer,bitcoin-net:peergroup'
   var connected = false;
 
   function myConnect() {
+    document.getElementById("idConnectRes").innerHTML = '';
     myLibrary.Connect()
       .then(()=>{ 
         console.log('in browser: connected to peer'); 
@@ -131,16 +190,16 @@
     let wif = document.getElementById("idMarmaraLockWif").value;
     let amount = parseFloat(document.getElementById("idMarmaraLockAmount").value);
 
-    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxhex").value = '';
     document.getElementById("idTxid").innerHTML = '';
+    document.getElementById("idMarmaraLockNotify").innerHTML = "Scroll to 'Transaction' to see the results";
 
     myLibrary.marmaraLock(wif, amount)
       .then((res)=>{ 
         document.getElementById("idTxhex").value = res.txhex;
       }) 
       .catch(err=>{
-        console.log('create error=', err)
-        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+        document.getElementById("idTxhex").value = 'tx creation error: '+err.message;
       })
   }
 
@@ -155,17 +214,16 @@
     let amount = parseFloat(document.getElementById("idMarmaraLoopAmount").value);
     let matures = parseInt(document.getElementById("idMarmaraMatures").value);
 
-    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxhex").value = '';
     document.getElementById("idTxid").innerHTML = '';
-
+    document.getElementById("idMarmaraReceiveNotify").innerHTML = "Scroll to 'Transaction' to see the results";
 
     myLibrary.marmaraReceive(wif, senderpk, amount, matures)
       .then((res)=>{ 
         document.getElementById("idTxhex").value = res.txhex;
       }) 
       .catch(err=>{
-        console.log('create error=', err)
-        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+        document.getElementById("idTxhex").value = 'tx creation error: '+err.message;
       })
   }
 
@@ -179,16 +237,63 @@
     let receivetxid = document.getElementById("idMarmaraReceiveTxid").value;
     let receiverpk = document.getElementById("idMarmaraReceiverPubkey").value;
 
-    document.getElementById("idTxhex").innerHTML = '';
+    document.getElementById("idTxhex").value = '';
     document.getElementById("idTxid").innerHTML = '';
+    document.getElementById("idMarmaraIssueNotify").innerHTML = "Scroll to 'Transaction' to see the results";
+
 
     myLibrary.marmaraIssue(wif, receivetxid, receiverpk)
       .then((res)=>{ 
         document.getElementById("idTxhex").value = res.txhex;
       }) 
       .catch(err=>{
-        console.log('create error=', err)
-        document.getElementById("idTxhex").value = 'create tx error: '+err.message;
+        document.getElementById("idTxhex").value = 'tx creation error: '+err.message;
+      })
+  }
+
+  function marmaraReceiveNext() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let wif = document.getElementById("idMarmaraReceiveForTransferWif").value;
+    let senderpk = document.getElementById("idMarmaraTransferSenderPubkey").value;
+    let batontxid = document.getElementById("idMarmaraBatonTxid").value;
+
+    document.getElementById("idTxhex").value = '';
+    document.getElementById("idTxid").innerHTML = '';
+    document.getElementById("idMarmaraReceiveNextNotify").innerHTML = "Scroll to 'Transaction' to see the results";
+
+    myLibrary.marmaraReceiveNext(wif, senderpk, batontxid)
+      .then((res)=>{ 
+        document.getElementById("idTxhex").value = res.txhex;
+      }) 
+      .catch(err=>{
+        document.getElementById("idTxhex").value = 'tx creation error: '+err.message;
+      })
+  }
+
+  function marmaraTransfer() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let wif = document.getElementById("idMarmaraTransferWif").value;
+    let receivetxid = document.getElementById("idMarmaraReceiveForTransferTxid").value;
+    let receiverpk = document.getElementById("idMarmaraTransferReceiverPubkey").value;
+
+    document.getElementById("idTxhex").value = '';
+    document.getElementById("idTxid").innerHTML = '';
+    document.getElementById("idMarmaraTransferNotify").innerHTML = "Scroll to 'Transaction' to see the results";
+
+    myLibrary.marmaraTransfer(wif, receivetxid, receiverpk)
+      .then((res)=>{ 
+        document.getElementById("idTxhex").value = res.txhex;
+      }) 
+      .catch(err=>{
+        document.getElementById("idTxhex").value = 'tx creation error: '+err.message;
       })
   }
 
@@ -199,6 +304,7 @@
     }
 
     let txhex = document.getElementById("idTxhex").value;
+    document.getElementById("idTxid").innerHTML = '';
 
     myLibrary.broadcastTxhex(txhex)
       .then((res)=>{ 
@@ -208,7 +314,6 @@
           document.getElementById("idTxid").innerHTML = "error: " + res.retcode;
       }) 
       .catch(err=>{
-        console.log('create error=', err)
         document.getElementById("idTxid").innerHTML = 'broadcast tx error: '+err.message;
       })
   }
@@ -220,15 +325,57 @@
     }
 
     let pk = document.getElementById("idMarmaraInfoPubkey").value;
+    document.getElementById("idMarmaraInfo").value = '';
 
-    myLibrary.marmaraInfo0000(pk)
+
+    myLibrary.marmaraInfoWrapper(pk)
       .then((res)=>{ 
         document.getElementById("idMarmaraInfo").value = JSON.stringify(res, null, '\t');
         console.log('res=', JSON.stringify(res, null, '\t'));
       }) 
       .catch(err=>{
         console.log('error=', err)
-        document.getElementById("idMarmaraInfo").innerHTML = 'error: '+err.message;
+        document.getElementById("idMarmaraInfo").value = 'error: '+err.message;
+      })
+  }
+
+  function marmaraReceiveList() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    document.getElementById("idMarmaraReceiveListResults").value = '';
+    let pk = document.getElementById("idMarmaraReceiveListPubkey").value;
+
+    myLibrary.marmaraReceiveListWrapper(pk)
+      .then((res)=>{ 
+        document.getElementById("idMarmaraReceiveListResults").value = JSON.stringify(res, null, '\t');
+        console.log('res=', JSON.stringify(res, null, '\t'));
+      }) 
+      .catch(err=>{
+        console.log('error=', err)
+        document.getElementById("idMarmaraReceiveListResults").value = 'error: '+err.message;
+      })
+  }
+
+  function marmaraGetCreditLoop() {
+    if (!connected) {
+      window.alert("not connected");    
+      return;
+    }
+
+    let mypk = document.getElementById("idMarmaraGetCreditLoopPubkey").value;
+    let batontxid = document.getElementById("idMarmaraGetCreditLoopBatonTxid").value;
+
+    myLibrary.marmaraGetCreditLoopWrapper(mypk, batontxid)
+      .then((res)=>{ 
+        document.getElementById("idMarmaraGetCreditLoopResults").value = JSON.stringify(res, null, '\t');
+        console.log('res=', JSON.stringify(res, null, '\t'));
+      }) 
+      .catch(err=>{
+        console.log('error=', err)
+        document.getElementById("idMarmaraGetCreditLoopResults").value = 'error: '+err.message;
       })
   }
 

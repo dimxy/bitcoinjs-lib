@@ -73,7 +73,7 @@ function finalizeCCtx(keyPairIn, psbt, ccProbes)
       if (privateKey === undefined)
         privateKey = keyPairIn.privateKey;
       if (inputCond === undefined)
-        throw new Error('finalizeCCtx no input cc found')
+        throw new Error('finalizeCCtx cannot sign tx: no probe found for cc input: ' + index);
 
       let signatureHash = psbt.__CACHE.__TX.hashForKomodo(
         index,
@@ -335,4 +335,94 @@ function ccTxidPubkey_tweak(txid)
       return pkbuf;
   }
   return Buffer.from([]);
+}
+
+exports.IsValidTxid = IsValidTxid;
+/**
+ * valid txid means it is a buf of correct length and non empty
+ * @param {*} txid 
+ */
+function IsValidTxid(txid)
+{
+  if (Buffer.isBuffer(txid) && txid.length == 32 /*&& !txid.equals(Buffer.allocUnsafe(32).fill('\0'))*/)
+    return true;
+  else
+    return false;
+}
+
+//exports.IsValidTxidHex = IsValidTxidHex;
+/**
+ * valid txid means it is a string of correct length and has hex chars
+ * @param {string} txid 
+ */
+/*function IsValidTxidHex(txid)
+{
+  if (typeof txid === 'string' && txid.length == 64 && txid.match(/[0-9a-f]/gi) /*&& (txid.match(/0/g) || '').length !== txid.length*//*)
+    return true;
+  else
+    return false;
+}*/
+
+exports.IsValidPubKey = IsValidPubKey;
+/**
+ * buf of correct length and non-empty
+ * @param {buffer} pubkey 
+ */
+function IsValidPubKey(pubkey)
+{
+  if (Buffer.isBuffer(pubkey) && pubkey.length == 33 /*&& !pubkey.equals(Buffer.allocUnsafe(33).fill('\0'))*/)
+    return true;
+  else
+    return false;
+}
+//exports.IsValidPubKeyHex = IsValidPubKeyHex;
+/**
+ * string of correct length and has hex chars and non empty
+ * @param {string} pubkey 
+ */
+/*function IsValidPubKeyHex(pubkey)
+{
+  if (typeof pubkey === 'string' && pubkey.length == 66 && txid.match(/[0-9a-f]/gi) && (txid.match(/0/g) || '').length !== txid.length)
+    return true;
+  else
+    return false;
+}*/
+
+exports.txidToHex = txidToHex;
+/**
+ * converts txid as buffer into hex LE
+ * @param {Buffer} buf 
+ * @returns {string} hex string or empty string if txid is not valid
+ */
+function txidToHex(buf)
+{
+  if (Buffer.isBuffer(buf) && buf.length == 32)  {
+    let reversed = Buffer.allocUnsafe(buf.length);
+    buf.copy(reversed);
+    reversed.reverse();
+    return reversed.toString('hex');
+  }
+  return ''; //'0'.repeat(32*2);
+}
+
+exports.txidFromHex = txidFromHex;
+/**
+ * converts from hex into buffer reversing from LE
+ * @param {string} hex 
+ * @returns {Buffer} converted txid as Buffer or empty Buffer
+ */
+function txidFromHex(hex)
+{
+  if (typeof hex === 'string' && hex.length == 64 && hex.match(/[0-9a-f]/gi))  {
+    let reversed = Buffer.from(hex, 'hex');
+    reversed.reverse();
+    return reversed;
+  }
+  return Buffer.from([]); //Buffer.allocUnsafe(32).fill('\0');
+}
+
+exports.toSatoshi = function (val) {
+  if (typeof val !== 'number')
+    throw new Error('amount not a number');
+  return Math.round(val * 100000000);
 }

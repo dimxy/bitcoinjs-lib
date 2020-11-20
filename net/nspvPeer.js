@@ -90,9 +90,22 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
     //let resStr = resp.jsonSer.toString();
     let result = JSON.parse(resp.jsonSer.toString());
     if (result.error) {
-      cb(result.error);
+      if (typeof result.result === 'string')
+        cb(new Error(result.error));
+      else if (result.error.message)
+        cb(new Error(result.error.message));
+      else if (result.error.code)
+        cb(new Error(result.error.code));
+      else
+        cb(new Error('nspv error (could not parse)'));
       return;
     }
+
+    if (result.result !== undefined && result.result.error) {
+      cb(new Error(result.result.error));
+      return;
+    }
+
     if (!resp.method) {
       cb(new Error('null nspv response method'));
       return;
@@ -118,7 +131,7 @@ Peer.prototype.nspvRemoteRpc = function(rpcMethod, _mypk, _params, opts, cb) {
 
   if (!opts.timeout) return
   timeout = setTimeout(() => {
-    debug(`getnSPV NSPV_REMOTERPC timed out: ${opts.timeout} ms`)
+    debug(`getnSPV NSPV_REMOTERPC ${rpcMethod} timed out: ${opts.timeout} ms`)
     var error = new Error('Request timed out')
     error.timeout = true
     cb(error)
